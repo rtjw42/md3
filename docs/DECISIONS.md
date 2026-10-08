@@ -1,6 +1,6 @@
 # md3 — Decision Document
 
-> Status: **pre-build / design; design review complete; every open item decided 2026-10-08 (§17)**. Last updated: 2026-10-08.
+> Status: **build phase** (started 2026-10-08). Design review complete; every open item decided 2026-10-08 (§17); build-phase changes are logged in §18. Last updated: 2026-10-08.
 >
 > Legend: **✅ Decided** · **🟡 Open** (has a recommendation, awaiting your call) · **⛔ Superseded**
 >
@@ -923,3 +923,12 @@ Every item that was still 🟡 on 2026-10-07 was decided by you, question by que
 | D18 | Sync is core | (founding) | **Amended: after v1** (#166) | R2 |
 
 **Unchanged by this session:** every design-review decision #74–#164, except where a row above says otherwise. The #118 test criterion was corrected separately on 2026-10-07 (2·fc → 5·fc).
+
+---
+
+## 18. Build-phase decision log
+
+Every decision made or changed during the build phase gets one row here, numbered from #173. A row states the old text, the new decision and why. Reasoning or evidence longer than three lines goes in `docs/decisions/<number>-<slug>.md`, linked from the row. A decision that replaces an earlier one is struck through in place with a pointer to its new number.
+
+| # | Date | Task | Old text | New decision | Why |
+|---|---|---|---|---|---|

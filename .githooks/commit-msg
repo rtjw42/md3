@@ -1,0 +1,5 @@
+#!/bin/sh
+# Rejects a commit message without a valid Task: trailer, with a malformed
+# subject, without Evidence: when the task is marked done, or with AI
+# attribution (security rule 10). Enable with: git config core.hooksPath .githooks
+exec python3 "$(git rev-parse --show-toplevel)/tools/track.py" msg "$1"
