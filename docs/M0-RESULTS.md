@@ -51,3 +51,11 @@ Recommendation: A, with B tried in parallel. Licensing is cleared before any pro
 - Korzeniowski & Widmer 2017: https://arxiv.org/abs/1706.02921
 - GiantSteps key dataset: https://github.com/GiantSteps/giantsteps-key-dataset
 - Ballroom (mirdata loader): https://mirdata.readthedocs.io/en/stable/_modules/mirdata/datasets/ballroom.html
+
+## EBU loudness test set (for #176, checked 2026-10-08)
+
+- File: `ebu-loudness-test-setv05.zip` (v05, 30 March 2016), downloaded by the maintainer and kept outside the repository. SHA-256 `9cc500b4df83f7c21855c74dce795ef5209a752bf884253ae57d0ce512efb062`, 91,631,421 bytes, 70 audio files plus `readme.txt`.
+- The readme credits third-party right holders for exactly two files, both film excerpts: `seq-3341-7_seq-3342-5` (3341 #7 = 3342 #5) and `seq-3341-8_seq-3342-6` (3341 #8 = 3342 #6). This matches Tech 3341 Table 1 and Tech 3342, which call only these cases "authentic programme". Every other file is a tone or noise signal described in the Tech documents. Readme: "The material may only be used for technical testing purposes."
+- Files outside the Tech 3341/3342 test cases: three `1kHz Sine -NN LUFS` tones and the Tech 3343 reference noise. md3 doesn't need them.
+- Build notes for B2.3.1 / B3: 3341 #6 comes in two versions (5.0 with `WAVE_FORMAT_PCM`, and 6 channels with a silent LFE and `WAVE_FORMAT_EXTENSIBLE`); the decoder must read both. 3341 #10 and #13 are split into 20 files each (file-based meters). Several names end in `.wav.wav`.
+- All 70 audio file names are matched by the #176 `.gitignore` rules and the `tools/track.py check` rule.

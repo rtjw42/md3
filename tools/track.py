@@ -618,10 +618,14 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
 
 
 # #176: the official EBU loudness test files may not be redistributed, so
-# they must never be committed. Matches audio named after Tech 3341/3342
-# and the EBU zip's folder; mirrored in .gitignore.
+# they must never be committed. Matches every name in the v05 zip (audio
+# named after Tech 3341/3342, the "1kHz Sine -NN LUFS" tones, the Tech 3343
+# reference noise) and the zip itself; mirrored in .gitignore.
 EBU_FILE = re.compile(
-    r"(^|/)[^/]*(3341|3342)[^/]*\.(wav|wave|bwf|aif|aiff|flac)$|(^|/)ebu-loudness-test-set",
+    r"(^|/)[^/]*(3341|3342)[^/]*\.(wav|wave|bwf|aif|aiff|flac)$"
+    r"|(^|/)1kHz Sine -\d+ LUFS[^/]*\.wav$"
+    r"|(^|/)EBU-reference_listening_signal[^/]*$"
+    r"|(^|/)ebu-loudness-test-set",
     re.IGNORECASE,
 )
 

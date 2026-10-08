@@ -366,7 +366,14 @@ class EbuFiles(TrackTestCase):
         self.repo.git("add", "-f", rel)
 
     def test_ebu_wav_rejected(self):
-        for rel in ["tests/seq-3341-7_seq-3342-5-24bit.wav", "x/EBU-3342-1.WAV", "ebu-loudness-test-setv05/readme.txt"]:
+        for rel in [
+            "tests/seq-3341-7_seq-3342-5-24bit.wav",
+            "tests/seq-3341-13-10-24bit.wav.wav",
+            "x/EBU-3342-1.WAV",
+            "x/1kHz Sine -20 LUFS-16bit.wav",
+            "x/EBU-reference_listening_signal_pinknoise_500Hz_2kHz_R128.wav",
+            "ebu-loudness-test-setv05/readme.txt",
+        ]:
             with self.subTest(rel=rel):
                 self.add(rel)
                 self.assertProblem("EBU test file")

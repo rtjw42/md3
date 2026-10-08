@@ -22,5 +22,7 @@ DerivedData/
 *3342*.aif*
 *3341*.flac
 *3342*.flac
+1kHz Sine -* LUFS*.wav
+EBU-reference_listening_signal*
 ebu-loudness-test-set*/
 ebu-loudness-test-set*.zip
