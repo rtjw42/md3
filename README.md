@@ -17,7 +17,7 @@ md3 is for producers and mixing engineers, as a Mac-wide audio utility for every
 
 - **Loudness:** integrated, short-term and momentary LUFS, loudness range and true peak, per ITU-R BS.1770 and EBU R128, checked in CI against the EBU Tech 3341 and 3342 test signals
 - **Spectrum and stereo:** averaged spectrum, stereo width per frequency, correlation, balance, goniometer
-- **History and Compare:** every measurement saved; up to four entries compared side by side, time-aligned and level-matched; JSON and CSV export
+- **History and Compare:** every measurement saved; up to four entries compared side by side, time-aligned, with optional level matching; JSON and CSV export
 - **File analysis:** drop audio files in to measure them
 - **Tempo and key** as rough estimates
 - **Processing:** EQ and compressor using Apple's Audio Units, third-party AUv2 / AUv3 plugins, level-matched A/B
