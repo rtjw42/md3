@@ -1,2 +1,16 @@
 .DS_Store
 __pycache__/
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+DerivedData/
+/build/
+
+# Swift Package Manager (Package.resolved is committed)
+.build/
+.swiftpm/
+
+# Local, per-user agent settings
+.claude/settings.local.json

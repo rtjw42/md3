@@ -4,7 +4,7 @@ One-time setup for the repo owner, done by hand **before the build agent starts*
 
 Tick each box as you go. Total time: about 30 minutes.
 
-**Status (2026-10-08):** done through the GitHub API with your approval: noreply email and history rewrite, commit signing on this Mac (verified), signing key on GitHub, public visibility, merge settings (4a), ruleset `protect-main` (4b, except the CI check), Actions limits incl. SHA pinning and fork-PR approval (4c), Dependabot, secret scanning, push protection and private vulnerability reporting (4d). Done by you: force push, signing scope, SSH passphrase, 2FA / passkey, email privacy, personal push protection. **Still open:** the required CI check and CodeQL (after B0.3.3), `git config core.hooksPath .githooks` (after B0.1.5), `brew install gitleaks`.
+**Status (2026-10-08):** done through the GitHub API with your approval: noreply email and history rewrite, commit signing on this Mac (verified), signing key on GitHub, public visibility, merge settings (4a), ruleset `protect-main` (4b, except the CI check), Actions limits incl. SHA pinning and fork-PR approval (4c), Dependabot, secret scanning, push protection and private vulnerability reporting (4d). Done by you: force push, signing scope, SSH passphrase, 2FA / passkey, email privacy, personal push protection, `git config core.hooksPath .githooks` (after B0.1.5), `brew install gitleaks`. **Still open:** the required CI check and CodeQL (after B0.3.3).
 
 ---
 

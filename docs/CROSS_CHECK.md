@@ -54,6 +54,7 @@ Questions to send the builder (copy-paste ready):
 - <question>
 
 Second opinion needed: yes / no <and the paste-ready summary if yes>
+Your hands-on check: <this batch's row from "Hands-on checkpoints for the user" below>
 ```
 
 - **APPROVE:** every claim verified, no serious concerns.
@@ -61,3 +62,31 @@ Second opinion needed: yes / no <and the paste-ready summary if yes>
 - **HOLD:** a claim is false, a guard was weakened, or accuracy misses the spec. Don't give the go.
 
 Keep the verdict honest, even when the batch was hard. If everything checks out, say so plainly.
+
+## Hands-on checkpoints for the user
+
+Things the user can see or hear at the end of each batch, without reading code. Quote the batch's row in "Your hands-on check".
+
+| After | Check it yourself | Pass looks like |
+|---|---|---|
+| B0 setup | Ask the builder to demo a bad commit being rejected. Open the repo on GitHub. | Rejected with a clear message. README, LICENSE and a green CI badge are visible. |
+| B1 prototypes | Open `docs/M0-RESULTS.md`. | Every check shows pass or fail with numbers. You understand which fallbacks were triggered. |
+| B2 infrastructure | Nothing to see; ask for the test count. | The count keeps rising. Stress and sanitizer jobs show up in Actions. |
+| B3 loudness ★ | Give it 3 files whose integrated LUFS, LRA and true peak you've measured in a meter you trust (Logic, Youlean, RX). Ask for md3's readings. | Integrated within 0.1 LU. LRA within 1 LU. True peak within +0.2 / −0.4 dB of your meter. For a strict true-peak test, also ask for md3's readings on the EBU test files. This is md3's core promise, so test it hard. |
+| B4 menu bar (M1) | Run the app and play a track in Spotify. Start, wait, stop. Compare with the same track metered in Logic. Check Activity Monitor. | The number in the menu bar matches. The dropdown looks like §2.1 at all 3 sizes. CPU is under 1% with the dropdown closed. |
+| B5 history | Measure, quit and reopen. Force-quit md3 mid-measurement. | Entries are still there. The force-quit leaves an "interrupted (recovered)" entry. |
+| B6 spectrum and stereo (M2) | Play pink noise, a sine and a mono file. Compare with an analyser you trust (e.g. SPAN). | The spectrum shape matches. The mono file shows zero width and correlation +1. |
+| B7 Compare (M3) | Drag in a master, then measure the same song on Spotify. Compare them. | File analysis is much faster than real time. The curves line up, and the level difference makes sense. |
+| B8 tempo and key | 10 tracks whose tempo and key you know. | Most are right; it shows "—" when it isn't confident. |
+| B9 processing | EQ on Spotify. Toggle A/B. Force-quit md3 while processing. Load a plugin that crashes. | You hear the EQ, A/B has no loudness jump, audio comes back within half a second, and md3 survives the plugin crash. |
+| B10 release | Install the preview on a fresh macOS user account by following only the instructions. Test an update. | The install works from the instructions alone. The update installs. Energy use in Activity Monitor is "Low". |
+
+### Warning signs at any time
+
+Stop and cross-check if you see any of these:
+
+- A test removed, skipped, or with a tolerance "adjusted"
+- Evidence with no numbers ("works", "should pass")
+- A batch report with no cross-check reminder
+- The builder asking you to run something that disables a check or changes signing
+- Backlog items described as "minor" that are really about accuracy

@@ -1,0 +1,52 @@
+name: Bug report
+description: Something in md3 doesn't work or measures wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please don't include track titles, file paths or other personal details you'd rather keep private. Security problems: report them privately, not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Select source …
+        2. Press Start …
+    validations:
+      required: true
+  - type: textarea
+    id: measurement
+    attributes:
+      label: Measurement details (if a value looks wrong)
+      description: The value md3 showed, the value you expected, and what you compared against (another meter, a reference file).
+  - type: input
+    id: md3-version
+    attributes:
+      label: md3 version
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: e.g. 15.3
+    validations:
+      required: true
+  - type: input
+    id: mac
+    attributes:
+      label: Mac model
+      placeholder: e.g. MacBook Pro M2, 2023
+  - type: input
+    id: source
+    attributes:
+      label: Audio source and output device
+      placeholder: e.g. Spotify → built-in speakers
