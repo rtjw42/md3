@@ -47,3 +47,5 @@ Summary (written when the batch closes): —
 - 2026-10-08 B0.1.3: task rows restored verbatim from the plan after review; only Depends on, Status and the B4.2.3 "see X1" pointer are additions.
 - 2026-10-08 B0.3.3: scope extended by the user to handle X2 (Dependabot commits in `track.py check`), moved from B0.5.3.
 - 2026-10-08 B0.4.2: the 11 DOC items (13 result rows in docs/M0-RESULTS.md) checked against primary sources: 11 rows confirmed, 1 partly (Logic L-only diagonal undocumented; hands-on check in B6.3.2), 1 failed (Faraldo profile licence not cleared → proposal #173).
+- 2026-10-08 Cross-check #173: APPROVE
+- 2026-10-08 Cross-check #174–#176: reviewed by the auditor; maintainer approved #174 and #175, and #176 with five changes (applied)
