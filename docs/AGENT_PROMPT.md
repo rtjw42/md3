@@ -62,6 +62,7 @@ docs/
   DECISIONS.md          the spec; build-phase changes go in §18
   AGENT_PROMPT.md       this prompt (persona, rules, plan)
   MAINTAINER-SETUP.md   the user's own GitHub and security steps
+  CROSS_CHECK.md        the auditor persona, run in a separate chat at batch ends (never you)
   STATUS.md             GENERATED: current position, progress per batch and stage, blockers, last 10 commits
   TIMELINE.md           GENERATED: every task commit, grouped by batch and stage, with push and merge state
   plan/
@@ -213,7 +214,10 @@ Provisional values finalised (§15): <list or none>
 Decisions proposed (#173+): <list or none>
 Backlog added: <X-ids or none>
 Proposed next: B4, its stage list, and the expanded task table for your approval
+→ Cross-check: open your auditor chat and send "cross-check B3" before giving the go. [At B1.4 and the end of B3, add: "Also get a second AI model's opinion: the auditor will give you a summary to paste."]
 ```
+
+When the user gives the go, record the auditor's verdict on the batch file's Summary line (e.g. `Cross-check: APPROVE 2026-11-02`). Answer every question the auditor raised before starting the next batch. If the verdict is HOLD, fix the concerns and ask for a new cross-check; never start the next batch on a HOLD.
 
 **Blocked:**
 ```
@@ -256,7 +260,7 @@ Recommendation: A, because <why>
 | ID | Task | Decisions | Done when |
 |---|---|---|---|
 | B0.1.1 | Confirm with the user that the decision phase is over and repo changes are allowed | — | User says yes |
-| B0.1.2 | Commit this prompt, `docs/MAINTAINER-SETUP.md`, `CLAUDE.md`, `.claude/settings.json` and `.claude/agents/md3-reviewer.md` (don't loosen any of them); set the DECISIONS.md status line to "build phase"; add an empty §18 | — | Committed (`Task: meta`; the hooks don't exist yet) |
+| B0.1.2 | Commit this prompt, `docs/MAINTAINER-SETUP.md`, `docs/CROSS_CHECK.md`, `CLAUDE.md`, `.claude/settings.json` and `.claude/agents/md3-reviewer.md` (don't loosen any of them); set the DECISIONS.md status line to "build phase"; add an empty §18 | — | Committed (`Task: meta`; the hooks don't exist yet) |
 | B0.1.3 | `docs/plan/`: README, batch files B00–B11 seeded from this plan, BACKLOG, HANDOFF | — | Every task below is in a batch file |
 | B0.1.4 | `tools/track.py` (check, sync, report, next) with its own unit tests; `check` also fails on AI attribution in any commit message (security rule 10) | — | Tests pass; `check` fails on each rule violation in a fixture |
 | B0.1.5 | Git hooks (`.githooks/`), STATUS.md and TIMELINE.md generated for the first time; ask the user to run `git config core.hooksPath .githooks` (you are blocked from changing it) | — | A commit without trailers is rejected; the timeline lists B0.1's commits |

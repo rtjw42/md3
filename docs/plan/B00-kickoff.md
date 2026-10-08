@@ -6,9 +6,9 @@ Summary (written when the batch closes): —
 | ID | Task | Decisions | Depends on | Done when | Status |
 |---|---|---|---|---|---|
 | B0.1.1 | Confirm with the user that the decision phase is over and repo changes are allowed | — | — | User says yes | done |
-| B0.1.2 | Commit the build prompt, `docs/MAINTAINER-SETUP.md`, `CLAUDE.md`, `.claude/settings.json` and `.claude/agents/md3-reviewer.md` (none loosened); set the DECISIONS.md status line to "build phase"; add an empty §18 | — | B0.1.1 | Committed (the hooks don't exist yet) | done |
+| B0.1.2 | Commit the build prompt, `docs/MAINTAINER-SETUP.md`, `docs/CROSS_CHECK.md`, `CLAUDE.md`, `.claude/settings.json` and `.claude/agents/md3-reviewer.md` (none loosened); set the DECISIONS.md status line to "build phase"; add an empty §18 | — | B0.1.1 | Committed (the hooks don't exist yet) | done |
 | B0.1.3 | `docs/plan/`: README, batch files B00–B11 seeded from the plan, BACKLOG, HANDOFF | — | B0.1.2 | Every planned task is in a batch file | done |
-| B0.1.4 | `tools/track.py` (check, sync, report, next) with its own unit tests; `check` also fails on AI attribution in any commit message (security rule 10) | — | B0.1.3 | Tests pass; `check` fails on each rule violation in a fixture | todo |
+| B0.1.4 | `tools/track.py` (check, sync, report, next) with its own unit tests; `check` also fails on AI attribution in any commit message (security rule 10) | — | B0.1.3 | Tests pass; `check` fails on each rule violation in a fixture | doing |
 | B0.1.5 | Git hooks (`.githooks/`), STATUS.md and TIMELINE.md generated for the first time; ask the user to run `git config core.hooksPath .githooks` | — | B0.1.4 | A commit without trailers is rejected; the timeline lists B0.1's commits | todo |
 
 ## B0.2 Repo basics
