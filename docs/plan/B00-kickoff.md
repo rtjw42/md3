@@ -22,7 +22,7 @@ Summary (written when the batch closes): —
 |---|---|---|---|---|---|
 | B0.3.1 | Xcode app target: LSUIElement, macOS 14.2 minimum, Apple Silicon only | D2, D3, #35, §6.1 | B0.2 | Empty app builds and shows a menu bar item | todo |
 | B0.3.2 | Swift package for modules, C target for real-time code, test targets; exact dependency versions, `Package.resolved` committed | D2, #42, #52, #102 | B0.3.1 | `swift test` runs a placeholder test in each target | todo |
-| B0.3.3 | CI (GitHub Actions, macOS runner, one pinned Xcode version): build, unit tests and `track.py check` on every push and PR. Actions pinned to full commit SHAs (the repo enforces this), `permissions: contents: read` | §4.8, security rule 4 | B0.3.2 | CI green on main; a PR with stale tracking files fails; then ask the user to add CI as a required check and set up CodeQL (MAINTAINER-SETUP, later steps) | todo |
+| B0.3.3 | CI (GitHub Actions, macOS runner, one pinned Xcode version): build, unit tests and `track.py check` on every push and PR. Actions pinned to full commit SHAs (the repo enforces this), `permissions: contents: read` | §4.8, security rule 4 | B0.3.2 | CI green on main; a PR with stale tracking files fails; then ask the user to add CI as a required check and set up CodeQL (MAINTAINER-SETUP, later steps); Dependabot commits pass `track.py check` (X2) | todo |
 
 ## B0.4 Evidence carried over
 | ID | Task | Decisions | Depends on | Done when | Status |
@@ -45,3 +45,4 @@ Summary (written when the batch closes): —
 - 2026-10-08 B0.1.1: user confirmed the decision phase is over and repo changes are allowed.
 - 2026-10-08 B0.1.2: committed with `Task: B0.1.2` (and B0.1.1 with its own commit) instead of `Task: meta`, so track.py can prove both are done.
 - 2026-10-08 B0.1.3: task rows restored verbatim from the plan after review; only Depends on, Status and the B4.2.3 "see X1" pointer are additions.
+- 2026-10-08 B0.3.3: scope extended by the user to handle X2 (Dependabot commits in `track.py check`), moved from B0.5.3.
