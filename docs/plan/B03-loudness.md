@@ -13,7 +13,7 @@ Summary (written when the batch closes): —
 |---|---|---|---|---|---|
 | B3.2.1 | Momentary, short-term, integrated with gating | #77, #78, #84 | B3.1 | Tech 3341 vectors within ±0.1 LU (#14) | todo |
 | B3.2.2 | LRA | §4.3 | B3.2.1 | Tech 3342 vectors pass | todo |
-| B3.2.3 | Programme vectors 3341 #7–8, 3342 #5–6; chunk-size bit-identity | §4.8 items 2–3 | B3.2.2 | CI jobs green | todo |
+| B3.2.3 | Programme vectors 3341 #7–8, 3342 #5–6; chunk-size bit-identity | §4.8 items 2–3, #176 | B3.2.2 | Generated vectors pass in CI; the official EBU set incl. 3341 #7–8 and 3342 #5–6 passes a local run on the maintainer's Mac with the #176 agreement test, numbers in Evidence; chunk-size bit-identity green in CI | todo |
 
 ## B3.3 True peak
 | ID | Task | Decisions | Depends on | Done when | Status |
@@ -30,3 +30,5 @@ Summary (written when the batch closes): —
 | B3.4.3 | CPU kernel bench | #161, §4.8 item 8 | B3.2.1, B3.3.1 | Figures recorded vs #161 | todo |
 
 ## Notes
+- 2026-10-08 B3.3.1: "Tech 3341 signals 15–23 pass" means the Tech 3341 true-peak tolerance +0.2 / −0.4 dB (§4.3); signals are generated in CI (#176).
+- 2026-10-08 B3: official EBU test files only on the maintainer's Mac, never committed or in CI; "EBU Mode" claimed only from a full local pass (#176).
