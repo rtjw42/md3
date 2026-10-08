@@ -25,8 +25,11 @@ DECISIONS = """\
 | ✅ 1 | First decision, see D1 and V1. |
 | ~~⛔ 2~~ | Superseded by #3. |
 | ✅ 3 | Third, checked by M0-1. |
-| ✅ 76a | Lettered decision. |
 | ✅ 32 / 56 | Combined row. |
+
+The log starts at #173 (mentioned, not defined).
+
+#### #76a ✅ Lettered decision defined by a heading
 """
 
 BATCH = """\
@@ -272,6 +275,85 @@ class Violations(TrackTestCase):
         self.repo.commit_all(msg("meta: One", "meta"))  # no sync
         self.repo.commit_all(msg("meta: Two", "meta"))  # no sync
         self.assertProblem("which is stale")
+
+
+class ReviewFixes(TrackTestCase):
+    def cite(self, ref: str):
+        p = self.repo.root / "docs/plan/B00-test.md"
+        p.write_text(p.read_text().replace("#76a, #32/56", ref))
+
+    def test_mentioned_but_undefined_decision_rejected(self):
+        self.cite("#173")
+        self.assertProblem("cites #173, not found")
+
+    def test_superseded_decision_rejected(self):
+        self.cite("#2")
+        self.assertProblem("cites #2, which is superseded")
+
+    def test_heading_defined_decision_accepted(self):
+        self.cite("#76a")
+        self.assertFalse(any("#76a" in e for e in self.repo.errors()))
+
+    def test_wrapped_and_lowercase_trailers(self):
+        text = "S\n\nbody\n\ntask: B0.1.1\nEvidence: first line\n  continued here\n"
+        self.assertEqual(
+            track.parse_trailers(text), {"Task": "B0.1.1", "Evidence": "first line continued here"}
+        )
+
+    def test_subject_prefix_checked_in_history(self):
+        self.repo.good_history()
+        self.repo.commit_all(msg("Untagged subject", "B0.1.1"), sync=True)
+        self.assertProblem("subject must start with 'B0.1.1: '")
+
+    def test_merge_after_main_moved_on(self):
+        self.repo.good_history()
+        self.repo.git("checkout", "-q", "-b", "stage-a")
+        self.repo.statuses("done", "done", "todo")
+        self.repo.commit_all(msg("B0.1.2: Do two", "B0.1.2", "two works"), sync=True)
+        self.repo.git("checkout", "-q", "main")
+        self.repo.git("checkout", "-q", "-b", "stage-b")
+        self.repo.commit_all(msg("X1: Fix thing", "X1"), sync=True)
+        self.repo.git("checkout", "-q", "main")
+        self.repo.git("merge", "-q", "--no-ff", "-m", "Merge pull request #2 from stage-b", "stage-b")
+        self.repo.git("merge", "-q", "--no-ff", "-m", "Merge pull request #3 from stage-a", "stage-a")
+        errors = self.repo.errors()
+        self.assertFalse(any("stale" in e for e in errors), errors)
+
+    def test_amend_gives_actionable_error(self):
+        self.repo.good_history()
+        track.sync(self.repo.root)
+        self.repo.git("add", "-A")
+        self.repo.git("commit", "-q", "--amend", "--no-edit")
+        self.assertProblem("after an amend or rebase")
+
+    def test_bad_banner_hash_rejected(self):
+        self.repo.good_history()
+        f = self.repo.root / track.STATUS
+        lines = f.read_text().splitlines(keepends=True)
+        lines[0] = track.GENERATED_MARK + "--output=/tmp/x -->\n"
+        f.write_text("".join(lines))
+        self.assertProblem("STATUS.md has a malformed generated banner")
+
+    def test_shallow_clone_reported(self):
+        self.repo.good_history()
+        clone = Path(self.tmp.name) / "shallow"
+        subprocess.run(
+            ["git", "clone", "-q", "--depth", "1", f"file://{self.repo.root}", str(clone)], check=True
+        )
+        errors = track.check(clone)
+        self.assertTrue(any("shallow clone" in e for e in errors), errors)
+
+    def test_sync_refuses_symlinked_output(self):
+        self.repo.good_history()
+        target = Path(self.tmp.name) / "outside.txt"
+        target.write_text("keep me\n")
+        f = self.repo.root / track.STATUS
+        f.unlink()
+        f.symlink_to(target)
+        with self.assertRaises(track.TrackError):
+            track.sync(self.repo.root)
+        self.assertEqual(target.read_text(), "keep me\n")
+        self.assertProblem("is a symlink")
 
 
 class Attribution(TrackTestCase):

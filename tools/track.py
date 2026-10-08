@@ -112,7 +112,7 @@ def parse_plan(root: Path) -> Plan:
         batch_num = int(m.group(1))
         batch: Batch | None = None
         stage: Stage | None = None
-        for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        for n, line in enumerate(read_plain(path).splitlines(), 1):
             if line.startswith("# "):
                 hm = re.match(r"^# (B\d+) (.+)$", line)
                 if not hm or hm.group(1) != f"B{batch_num}":
@@ -150,24 +150,39 @@ def parse_plan(root: Path) -> Plan:
     backlog_ids: set[str] = set()
     backlog = plan_dir / "BACKLOG.md"
     if backlog.exists():
-        for line in backlog.read_text(encoding="utf-8").splitlines():
+        for line in read_plain(backlog).splitlines():
             if line.startswith("| X"):
                 backlog_ids.add(split_row(line)[0])
     return Plan(batches, backlog_ids, errors)
 
 
-def decision_index(root: Path) -> tuple[set[str], str]:
-    """Return (numbered decision IDs, full text) from DECISIONS.md."""
-    text = (root / DECISIONS).read_text(encoding="utf-8")
-    nums: set[str] = set()
+@dataclass
+class DecisionIndex:
+    active: set[str]
+    superseded: set[str]
+    text: str
+
+
+def decision_index(root: Path) -> DecisionIndex:
+    """Numbered decisions are defined by a table row whose first cell is the
+    number (e.g. '| ✅ 102 |', '| 22 |', '| ✅ 32 / 56 |') or by a heading
+    ('#### #76a ...'). A row marked ⛔ defines a superseded decision. Mere
+    mentions of '#N' in running text define nothing."""
+    text = read_plain(root / DECISIONS)
+    active: set[str] = set()
+    retired: set[str] = set()
     for line in text.splitlines():
         if line.startswith("|"):
-            first = re.sub(r"[~*✅⛔🟡\s]", "", split_row(line)[0])
+            cell = split_row(line)[0]
+            first = re.sub(r"[~*✅⛔🟡\s]", "", cell)
             for part in re.split(r"[,/]", first):
                 if re.fullmatch(r"\d+[a-z]?", part):
-                    nums.add(part)
-    nums.update(re.findall(r"#(\d+[a-z]?)\b", text))
-    return nums, text
+                    (retired if "⛔" in cell else active).add(part)
+        else:
+            m = re.match(r"^#{2,4} #(\d+[a-z]?)\b", line)
+            if m:
+                active.add(m.group(1))
+    return DecisionIndex(active, retired - active, text)
 
 
 def decision_refs(cell: str) -> list[str]:
@@ -218,11 +233,20 @@ def parse_trailers(message: str) -> dict[str, str]:
     if len(paragraphs) < 2:
         return {}
     trailers: dict[str, str] = {}
+    last: str | None = None
     for line in paragraphs[-1].splitlines():
+        if line[:1] in (" ", "\t") and last is not None:  # continuation line
+            trailers[last] = f"{trailers[last]} {line.strip()}"
+            continue
         m = TRAILER.match(line.strip())
         if not m:
             return {}
-        trailers.setdefault(m.group(1), m.group(2).strip())
+        key = m.group(1).title()  # git trailer keys are case-insensitive
+        if key not in trailers:
+            trailers[key] = m.group(2).strip()
+            last = key
+        else:
+            last = None
     return trailers
 
 
@@ -287,6 +311,10 @@ def attribution_hit(message: str) -> str | None:
         cleaned = cleaned.replace(allowed, "")
     m = ATTRIBUTION.search(cleaned)
     return m.group(0) if m else None
+
+
+def subject_ok(subject: str, tid: str) -> bool:
+    return tid == "meta" or subject.startswith(f"{tid}: ")
 
 
 def kickoff_index(history: list[Commit]) -> int | None:
@@ -484,7 +512,7 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
     pre-commit hook runs; the commit-msg hook checks that one instead."""
     plan = parse_plan(root)
     errors = list(plan.errors)
-    nums, dec_text = decision_index(root)
+    decisions = decision_index(root)
 
     seen: dict[str, str] = {}
     all_stage_ids = {s.id for b in plan.batches for s in b.stages}
@@ -499,7 +527,9 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
         if not STATUS_RE.match(t.status):
             errors.append(f"{where}: {t.id} has invalid status '{t.status}'")
         for ref in decision_refs(t.decisions):
-            if not decision_exists(ref, nums, dec_text):
+            if ref.startswith("#") and ref[1:] in decisions.superseded:
+                errors.append(f"{where}: {t.id} cites {ref}, which is superseded (⛔) in {DECISIONS}")
+            elif not decision_exists(ref, decisions.active, decisions.text):
                 errors.append(f"{where}: {t.id} cites {ref}, not found in {DECISIONS}")
         for dep in t.depends:
             known = (
@@ -513,6 +543,9 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
     if len(doing) > 1:
         errors.append(f"more than one task is doing: {', '.join(doing)}")
 
+    if git(root, "rev-parse", "--is-shallow-repository").strip() == "true":
+        errors.append("shallow clone: track.py needs full history (CI: actions/checkout with fetch-depth: 0)")
+        return errors
     history = commits(root)
     for c in history:
         hit = attribution_hit(c.message)
@@ -531,6 +564,8 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
         if not (tid == "meta" or tid in all_task_ids or (X_ID.match(tid) and tid in plan.backlog_ids)):
             errors.append(f"commit {c.short}: Task: {tid} is not a task ID, a backlog X ID or 'meta'")
             continue
+        if not subject_ok(c.subject, tid):
+            errors.append(f"commit {c.short}: subject must start with '{tid}: '")
         task_commits.setdefault(tid, []).append(c)
     for t in plan.tasks:
         if t.status != "done" or pre_commit:
@@ -545,11 +580,22 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
     return errors
 
 
+def read_plain(path: Path) -> str:
+    """Read a tracked text file, refusing symlinks (a PR could point one
+    anywhere on the machine that runs the check)."""
+    if path.is_symlink():
+        raise TrackError(f"{path} is a symlink; tracking files must be regular files")
+    return path.read_text(encoding="utf-8")
+
+
 def check_generated(root: Path, plan: Plan) -> list[str]:
     errors = []
     current = head(root)
     for path, gen in ((STATUS, gen_status), (TIMELINE, gen_timeline)):
         f = root / path
+        if f.is_symlink():
+            errors.append(f"{path} is a symlink; it must be a regular generated file")
+            continue
         if not f.exists():
             errors.append(f"{path} missing; run tools/track.py sync")
             continue
@@ -558,13 +604,20 @@ def check_generated(root: Path, plan: Plan) -> list[str]:
         if base is None:
             errors.append(f"{path} has no generated banner; run tools/track.py sync")
             continue
+        if base != "(no commits)" and not re.fullmatch(r"[0-9a-f]{40}", base):
+            errors.append(f"{path} has a malformed generated banner; run tools/track.py sync")
+            continue
         if base == "(no commits)":
             base_ok = current is None
             base = None
         else:
             base_ok = current is not None and allowed_base(root, base, current)
         if not base_ok:
-            errors.append(f"{path} was generated at {base[:7] if base else 'no commit'}, which is stale; run tools/track.py sync")
+            errors.append(
+                f"{path} was generated at {base[:7] if base else 'no commit'}, which is stale "
+                "(after an amend or rebase the hook's base commit is gone): run tools/track.py sync "
+                "and commit the result; prefer a new commit over --amend"
+            )
             continue
         expected = gen(plan, commits(root, base) if base else [], base, None)
         if normalise(text) != normalise(expected):
@@ -600,7 +653,7 @@ def check_message(root: Path, text: str) -> list[str]:
     if not (tid == "meta" or task or (X_ID.match(tid) and tid in plan.backlog_ids)):
         errors.append(f"Task: {tid} is not a task ID, a backlog X ID or 'meta'")
         return errors
-    if tid != "meta" and not subject.startswith(f"{tid}: "):
+    if not subject_ok(subject, tid):
         errors.append(f"subject must start with '{tid}: '")
     if task and task.status == "done" and "Evidence" not in parse_trailers(message):
         earlier = [c for c in commits(root) if c.trailers.get("Task") == tid and "Evidence" in c.trailers]
@@ -619,7 +672,11 @@ def allowed_base(root: Path, base: str, current: str) -> bool:
         git(root, "merge-base", "--is-ancestor", base, current)
     except TrackError:
         return False
-    newer = [line.split() for line in git(root, "rev-list", "--parents", f"{base}..{current}").splitlines()]
+    revs = [f"{base}..{current}"]
+    parents = git(root, "rev-list", "--parents", "-n", "1", current).split()[1:]
+    if len(parents) > 1:  # a merge: ignore what main already had
+        revs += ["--not", parents[0]]
+    newer = [line.split() for line in git(root, "rev-list", "--parents", *revs).splitlines()]
     plain = [ids for ids in newer if len(ids) == 2]
     # At most one ordinary commit: the one the hook generated the files for.
     return not plain or (len(plain) == 1 and plain[0][1] == base)
@@ -632,6 +689,9 @@ def sync(root: Path, info: PushInfo | None = None) -> None:
     plan = parse_plan(root)
     base = head(root)
     history = commits(root)
+    for path in (STATUS, TIMELINE):
+        if (root / path).is_symlink():
+            raise TrackError(f"{path} is a symlink; refusing to write through it")
     (root / STATUS).write_text(gen_status(plan, history, base, info), encoding="utf-8")
     (root / TIMELINE).write_text(gen_timeline(plan, history, base, info), encoding="utf-8")
 
@@ -645,7 +705,10 @@ def safe_push_info(root: Path) -> PushInfo | None:
 
 def report(root: Path, fetch: bool = True) -> str:
     if fetch:
-        subprocess.run(["git", "fetch", "--quiet", "origin"], cwd=root, capture_output=True)
+        try:
+            subprocess.run(["git", "fetch", "--quiet", "origin"], cwd=root, capture_output=True, timeout=20)
+        except subprocess.TimeoutExpired:
+            print("track.py report: fetch timed out; push state may be out of date", file=sys.stderr)
     plan = parse_plan(root)
     history = commits(root)
     info = safe_push_info(root)
