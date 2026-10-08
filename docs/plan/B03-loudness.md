@@ -13,13 +13,13 @@ Summary (written when the batch closes): —
 |---|---|---|---|---|---|
 | B3.2.1 | Momentary, short-term, integrated with gating | #77, #78, #84 | B3.1 | Tech 3341 vectors within ±0.1 LU (#14) | todo |
 | B3.2.2 | LRA | §4.3 | B3.2.1 | Tech 3342 vectors pass | todo |
-| B3.2.3 | Programme vectors 3341 #7–8, 3342 #5–6; chunk-size bit-identity | §4.8 | B3.2.2 | CI jobs green | todo |
+| B3.2.3 | Programme vectors 3341 #7–8, 3342 #5–6; chunk-size bit-identity | §4.8 items 2–3 | B3.2.2 | CI jobs green | todo |
 
 ## B3.3 True peak
 | ID | Task | Decisions | Depends on | Done when | Status |
 |---|---|---|---|---|---|
 | B3.3.1 | TruePeak analyser: oversampling designs, sample peak, FIR flush at `finish()` | #76, #76a, V1, V2 | B2 | Tech 3341 signals 15–23 pass | todo |
-| B3.3.2 | #76 burst test against the real code | §4.8 | B3.3.1 | CI job green | todo |
+| B3.3.2 | #76 burst test against the real code | §4.8 item 1 | B3.3.1 | CI job green | todo |
 | B3.3.3 | Clipped-master cross-check vs an ideal reference and libebur128 → finalise #76a (needs the user's masters) | #76a, §15 | B3.3.1 | Values finalised or changed via §18 | todo |
 
 ## B3.4 Derived and module checks
@@ -27,6 +27,6 @@ Summary (written when the batch closes): —
 |---|---|---|---|---|---|
 | B3.4.1 | Derived module: trim duration and PLR | #75, #79, V3, V17 | B3.2.1, B3.3.1 | Versioned `DerivedResult` | todo |
 | B3.4.2 | Disable-each and failure injection with the real modules, incl. slow/blocked | #106, #146 | B3.4.1 | Other sections byte-identical | todo |
-| B3.4.3 | CPU kernel bench | #161, §4.8 | B3.2.1, B3.3.1 | Figures recorded vs #161 | todo |
+| B3.4.3 | CPU kernel bench | #161, §4.8 item 8 | B3.2.1, B3.3.1 | Figures recorded vs #161 | todo |
 
 ## Notes

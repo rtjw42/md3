@@ -25,6 +25,6 @@ Summary (written when the batch closes): —
 | ID | Task | Decisions | Depends on | Done when | Status |
 |---|---|---|---|---|---|
 | B5.4.1 | Time alignment → finalise #75 values on real cross-source captures | #75, §15 | B5.3.1 | Alignment tests pass; values finalised | todo |
-| B5.4.2 | Level-match toggle; version labels | #92, V13, #102 | B5.4.1 | Differences labelled, never silently overlaid | todo |
+| B5.4.2 | Level-match toggle; version labels | #92, V13, rule 5 | B5.4.1 | Differences labelled, never silently overlaid | todo |
 
 ## Notes

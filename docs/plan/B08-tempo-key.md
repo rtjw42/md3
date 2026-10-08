@@ -5,7 +5,7 @@ Summary (written when the batch closes): —
 ## B8.1 Tempo
 | ID | Task | Decisions | Depends on | Done when | Status |
 |---|---|---|---|---|---|
-| B8.1.1 | Tempo analyser with its own onset front end | #107, #108, #109, #115 | B7 | Synthetic tests pass | todo |
+| B8.1.1 | Tempo analyser with its own onset front end | #107–#109, #115 | B7 | Synthetic tests pass | todo |
 
 ## B8.2 Key
 | ID | Task | Decisions | Depends on | Done when | Status |
