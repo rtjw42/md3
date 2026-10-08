@@ -374,14 +374,14 @@ def next_task(plan: Plan) -> Task | None:
     return next((t for t in plan.tasks if t.status == "todo" and deps_done(plan, t)), None)
 
 
-def batch_cleared(b: Batch) -> bool:
-    """True if the latest 'Cross-check <batch>: <verdict>' note is not a HOLD."""
+def latest_verdict(b: Batch) -> str | None:
+    """The latest 'Cross-check <batch>: <verdict>' note, upper-cased."""
     verdicts = [
-        m.group(1).strip()
+        m.group(1).strip().upper()
         for note in b.notes
         if (m := re.search(rf"Cross-check {re.escape(b.id)}: (.+)$", note))
     ]
-    return bool(verdicts) and not verdicts[-1].upper().startswith("HOLD")
+    return verdicts[-1] if verdicts else None
 
 
 def next_cross_check(plan: Plan) -> str:
@@ -395,7 +395,10 @@ def next_cross_check(plan: Plan) -> str:
         d, n = counts(b.tasks)
         if d < n:
             return f"at the end of {b.id} {b.name}{extra}"
-        if not batch_cleared(b):
+        verdict = latest_verdict(b)
+        if verdict and verdict.startswith("APPROVE WITH CONDITIONS"):
+            return f"**{b.id} {b.name}: conditions open**; answer the auditor's conditions, then record APPROVE"
+        if verdict is None or verdict.startswith("HOLD"):
             return f"**due now: {b.id} {b.name} is done**{extra}; send your auditor chat \"cross-check {b.id}\""
     return "none"
 

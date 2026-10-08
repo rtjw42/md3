@@ -480,6 +480,8 @@ class NextAndReport(TrackTestCase):
         self.assertIn("due now", line())  # a different target doesn't clear the batch
         p.write_text(p.read_text() + "- 2026-10-08 Cross-check B0: HOLD\n")
         self.assertIn("due now", line())  # HOLD needs a new cross-check
+        p.write_text(p.read_text() + "- 2026-10-09 Cross-check B0: APPROVE WITH CONDITIONS\n")
+        self.assertIn("conditions open", line())
         p.write_text(p.read_text() + "- 2026-10-09 Cross-check B0: skipped by user\n")
         self.assertIn("none", line())
 
