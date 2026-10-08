@@ -81,15 +81,12 @@ Things the user can see or hear at the end of each batch, without reading code. 
 | B9 processing | EQ on Spotify. Toggle A/B. Force-quit md3 while processing. Load a plugin that crashes. | You hear the EQ, A/B has no loudness jump, audio comes back within half a second, and md3 survives the plugin crash. |
 | B10 release | Install the preview on a fresh macOS user account by following only the instructions. Test an update. | The install works from the instructions alone. The update installs. Energy use in Activity Monitor is "Low". |
 
-### Warning signs
+### Warning signs at any time
 
-Tell the user to hold the go, and ask for a cross-check, if any of these show up:
+Stop and cross-check if you see any of these:
 
-- A report says "tests pass" without numbers, or the test count drops between batches.
-- A tolerance, reference value or accuracy target changed without a §18 entry.
-- A task is marked `done` but its "Done when" wasn't literally met (for example "close enough" or "mostly").
-- Tests were skipped, deleted or marked expected-to-fail, or a CI job, hook, linter or sanitizer was turned off.
-- Work was moved to the backlog or a later batch without the user agreeing to it.
-- md3's readings differ from a meter you trust by more than the target, even "only on one file".
-- Anything asks for a key, password, certificate or a GitHub setting change outside `docs/MAINTAINER-SETUP.md`.
-- The builder's report and STATUS / TIMELINE disagree.
+- A test removed, skipped, or with a tolerance "adjusted"
+- Evidence with no numbers ("works", "should pass")
+- A batch report with no cross-check reminder
+- The builder asking you to run something that disables a check or changes signing
+- Backlog items described as "minor" that are really about accuracy
