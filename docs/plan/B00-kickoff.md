@@ -14,8 +14,8 @@ Summary (written when the batch closes): —
 ## B0.2 Repo basics
 | ID | Task | Decisions | Depends on | Done when | Status |
 |---|---|---|---|---|---|
-| B0.2.1 | LICENSE (MIT), README (links to DECISIONS, STATUS, TIMELINE), CHANGELOG in Keep a Changelog format with semantic versions | #40, §9 | B0.1 | Files present | todo |
-| B0.2.2 | CONTRIBUTING (incl. hook setup and the commit format), issue templates, Swift/Xcode `.gitignore` | §9 | B0.2.1 | Files present | todo |
+| B0.2.1 | LICENSE (MIT), README (links to DECISIONS, STATUS, TIMELINE), CHANGELOG in Keep a Changelog format with semantic versions | #40, §9 | B0.1 | Files present | done |
+| B0.2.2 | CONTRIBUTING (incl. hook setup and the commit format), issue templates, Swift/Xcode `.gitignore` | §9 | B0.2.1 | Files present | doing |
 
 ## B0.3 Project skeleton and CI
 | ID | Task | Decisions | Depends on | Done when | Status |
