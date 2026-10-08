@@ -467,6 +467,21 @@ class NextAndReport(TrackTestCase):
         self.assertIn("B0.1.2 Do two: needs masters", text)
         self.assertIn("1 / 3 tasks", text)
 
+    def test_next_cross_check(self):
+        def line():
+            text = track.gen_status(track.parse_plan(self.repo.root), [], None, None)
+            return next(l for l in text.splitlines() if l.startswith("- Next cross-check:"))
+
+        self.assertIn("at the end of B0 Test batch", line())
+        self.repo.statuses("done", "done", "dropped: not needed")
+        self.assertIn("due now: B0 Test batch is done", line())
+        p = self.repo.root / "docs/plan/B00-test.md"
+        p.write_text(p.read_text() + "- 2026-10-08 Cross-check B0: skipped by user\n")
+        self.assertIn("none", line())
+
+    def test_second_opinion_batches(self):
+        self.assertEqual(track.SECOND_OPINION, {"B1", "B3"})
+
     def test_trailers_only_from_last_paragraph(self):
         self.assertEqual(track.parse_trailers("S\n\nTask: B0.1.1 in body text\n\nWhy: x"), {"Why": "x"})
         self.assertEqual(track.parse_trailers("S\n\nbody\n\nTask: B0.1.1\nnot a trailer"), {})

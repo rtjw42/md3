@@ -201,9 +201,15 @@ Stage B3.2 Loudness analyser — done (3 tasks, PR #14)
 Works now: <one or two lines, plain language>
 Evidence: <tests and numbers>
 Changed or found: <notes, §15 values finalised, backlog items added; or none>
-Review: code-review <n> findings (<n> fixed, <n> backlogged) · security-review <n> (<n> fixed, <n> backlogged)
+Review: code-review <n> findings (<n> fixed, <n> backlogged) · security-review <n> (<n> fixed, <n> backlogged) · md3-reviewer <n> (<n> fixed, <n> backlogged)
+Findings:
+- code-review · major · <one line> · fixed in a1b2c3d
+- security-review · low · <one line> · backlogged X7
+- md3-reviewer · minor · <one line> · fixed in d4e5f6a
 Next stage: B3.3 True peak
 ```
+
+The PR body lists **every** finding from `/code-review`, `/security-review` and `md3-reviewer`, one line each: source, severity, what, and the outcome (`fixed in <commit>`, `backlogged <X-id>`, or `no change: <why>`). Counts alone aren't enough.
 
 **Batch done:** stop and wait for the user's go.
 ```
@@ -214,10 +220,10 @@ Provisional values finalised (§15): <list or none>
 Decisions proposed (#173+): <list or none>
 Backlog added: <X-ids or none>
 Proposed next: B4, its stage list, and the expanded task table for your approval
-→ Cross-check: open your auditor chat and send "cross-check B3" before giving the go. [At B1.4 and the end of B3, add: "Also get a second AI model's opinion: the auditor will give you a summary to paste."]
+→ Cross-check needed: batch B3 done (also get a second AI model's opinion). Send your auditor chat: "cross-check B3"
 ```
 
-When the user gives the go, record the auditor's verdict on the batch file's Summary line (e.g. `Cross-check: APPROVE 2026-11-02`). Answer every question the auditor raised before starting the next batch. If the verdict is HOLD, fix the concerns and ask for a new cross-check; never start the next batch on a HOLD.
+When the user replies, record the auditor's verdict in the batch file's Notes (e.g. `- 2026-11-02 Cross-check B3: APPROVE`, or `- 2026-11-02 Cross-check B3: skipped by user`). Answer every question the auditor raised before starting the next batch. If the verdict is HOLD, fix the concerns and ask for a new cross-check; never start the next batch on a HOLD.
 
 **Blocked:**
 ```
@@ -232,6 +238,25 @@ Options: A <gain / cost> · B <gain / cost>
 Test against the standard method: <how>
 Recommendation: A, because <why>
 ```
+
+### When to remind me to cross-check
+
+Remind the user to run the auditor (`docs/CROSS_CHECK.md`) whenever any of these happens, and **don't continue past that point** until they reply with the auditor's verdict or say "skip":
+
+1. A batch is done. At B1.4 (the M0 gate) and the end of B3 (loudness accuracy), also tell them to get a second AI model's opinion.
+2. You propose a decision change (#173+).
+3. You finalise a §15 provisional value.
+4. A test tolerance, reference value or accuracy target changes.
+5. A blocker or major review finding is backlogged instead of fixed.
+6. Anything in B10.3–B10.4 is about to ship.
+
+The last line of that message is always:
+
+```
+→ Cross-check needed: <reason>. Send your auditor chat: "cross-check <target>"
+```
+
+Record the verdict, or "skipped by user", in the relevant batch file's Notes as `- <date> Cross-check <target>: <verdict>`. `track.py` shows the next due cross-check in STATUS.md.
 
 ## How you work
 
