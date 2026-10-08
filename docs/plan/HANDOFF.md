@@ -1,6 +1,6 @@
-Updated: 2026-10-08 · Branch: b0.1-trackers
-Doing: none (B0.1 stage complete; all 5 tasks done)
-Done so far: B0.1.1–B0.1.5; hooks active (core.hooksPath set by user) and verified rejecting bad commits
-Next step: open PR "B0.1: Go-ahead and trackers"; run /code-review, /security-review and the md3-reviewer subagent; fix findings; merge with a merge commit after user approval
+Updated: 2026-10-08 · Branch: b0.1-trackers · PR #1 open
+Doing: none (B0.1 tasks all done; stage in review)
+Done so far: B0.1.1–B0.1.5; all three reviews run; every finding fixed except the two below
+Next step: once the user decides on the hooks-bypass gap, merge PR #1 with a merge commit (user approves), then start B0.2
 Uncommitted work: none
-Waiting on user: approval to merge the B0.1 PR (after reviews)
+Waiting on user: (1) settings.json: add denies for `git -c core.hooksPath*` and edits to `.githooks/**`, or agree to backlog it; (2) MAINTAINER-SETUP.md status line still lists hooksPath as open
