@@ -613,7 +613,26 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
             errors.append(f"{t.file}:{t.line}: {t.id} is done but none of its commits has an Evidence: trailer")
 
     errors += check_generated(root, plan)
+    errors += check_no_ebu_files(root)
     return errors
+
+
+# #176: the official EBU loudness test files may not be redistributed, so
+# they must never be committed. Matches audio named after Tech 3341/3342
+# and the EBU zip's folder; mirrored in .gitignore.
+EBU_FILE = re.compile(
+    r"(^|/)[^/]*(3341|3342)[^/]*\.(wav|wave|bwf|aif|aiff|flac)$|(^|/)ebu-loudness-test-set",
+    re.IGNORECASE,
+)
+
+
+def check_no_ebu_files(root: Path) -> list[str]:
+    tracked = git(root, "ls-files", "-z").split("\0")
+    return [
+        f"{path}: looks like an official EBU test file; these must never be committed (#176)"
+        for path in tracked
+        if path and EBU_FILE.search(path)
+    ]
 
 
 def read_plain(path: Path) -> str:

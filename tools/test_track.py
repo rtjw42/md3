@@ -356,6 +356,28 @@ class ReviewFixes(TrackTestCase):
         self.assertProblem("is a symlink")
 
 
+class EbuFiles(TrackTestCase):
+    """#176: official EBU test files must never be committed."""
+
+    def add(self, rel: str) -> None:
+        f = self.repo.root / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(b"RIFF")
+        self.repo.git("add", "-f", rel)
+
+    def test_ebu_wav_rejected(self):
+        for rel in ["tests/seq-3341-7_seq-3342-5-24bit.wav", "x/EBU-3342-1.WAV", "ebu-loudness-test-setv05/readme.txt"]:
+            with self.subTest(rel=rel):
+                self.add(rel)
+                self.assertProblem("EBU test file")
+                self.repo.git("rm", "-q", "--cached", rel)
+
+    def test_other_files_allowed(self):
+        self.add("tests/generated_3341_1.swift")
+        self.add("tests/sine-1k.wav")
+        self.assertFalse(any("EBU test file" in e for e in self.repo.errors()))
+
+
 class Attribution(TrackTestCase):
     CASES = [
         "Co-Authored-By: Claude <noreply@anthropic.com>",
