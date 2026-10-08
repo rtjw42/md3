@@ -374,6 +374,16 @@ def next_task(plan: Plan) -> Task | None:
     return next((t for t in plan.tasks if t.status == "todo" and deps_done(plan, t)), None)
 
 
+def batch_cleared(b: Batch) -> bool:
+    """True if the latest 'Cross-check <batch>: <verdict>' note is not a HOLD."""
+    verdicts = [
+        m.group(1).strip()
+        for note in b.notes
+        if (m := re.search(rf"Cross-check {re.escape(b.id)}: (.+)$", note))
+    ]
+    return bool(verdicts) and not verdicts[-1].upper().startswith("HOLD")
+
+
 def next_cross_check(plan: Plan) -> str:
     """The auditor runs at every batch end (AGENT_PROMPT, 'When to remind me
     to cross-check'); its verdict is recorded as a 'Cross-check' line in the
@@ -385,7 +395,7 @@ def next_cross_check(plan: Plan) -> str:
         d, n = counts(b.tasks)
         if d < n:
             return f"at the end of {b.id} {b.name}{extra}"
-        if not any("Cross-check" in note for note in b.notes):
+        if not batch_cleared(b):
             return f"**due now: {b.id} {b.name} is done**{extra}; send your auditor chat \"cross-check {b.id}\""
     return "none"
 

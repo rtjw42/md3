@@ -476,7 +476,11 @@ class NextAndReport(TrackTestCase):
         self.repo.statuses("done", "done", "dropped: not needed")
         self.assertIn("due now: B0 Test batch is done", line())
         p = self.repo.root / "docs/plan/B00-test.md"
-        p.write_text(p.read_text() + "- 2026-10-08 Cross-check B0: skipped by user\n")
+        p.write_text(p.read_text() + "- 2026-10-08 Cross-check #173: APPROVE\n")
+        self.assertIn("due now", line())  # a different target doesn't clear the batch
+        p.write_text(p.read_text() + "- 2026-10-08 Cross-check B0: HOLD\n")
+        self.assertIn("due now", line())  # HOLD needs a new cross-check
+        p.write_text(p.read_text() + "- 2026-10-09 Cross-check B0: skipped by user\n")
         self.assertIn("none", line())
 
     def test_second_opinion_batches(self):
