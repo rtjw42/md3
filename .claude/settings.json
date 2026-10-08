@@ -11,6 +11,9 @@
       "Edit(~/.ssh/**)",
       "Edit(~/.gitconfig)",
       "Edit(.git/hooks/**)",
+      "Bash(git -c core.hooksPath*)",
+      "Bash(git * -c core.hooksPath*)",
+      "Edit(.githooks/**)",
       "Edit(.claude/settings.json)",
       "Edit(.claude/settings.local.json)",
       "Edit(.claude/agents/**)",
@@ -73,7 +76,8 @@
       "Bash(gh pr merge*)",
       "Bash(git tag*)",
       "Bash(gh release create*)",
-      "Bash(git push origin --tags*)"
+      "Bash(git push origin --tags*)",
+      "Edit(tools/track.py)"
     ]
   },
   "attribution": {
