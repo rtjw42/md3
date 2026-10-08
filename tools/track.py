@@ -5,7 +5,7 @@ Reads the batch files in docs/plan/, the decision IDs in docs/DECISIONS.md
 and the commit trailers in git, and generates docs/STATUS.md and
 docs/TIMELINE.md from them. Standard library only.
 
-Usage: python3 tools/track.py {check,sync,report,next} [--root DIR]
+Usage: python3 tools/track.py {check,sync,report,next,msg FILE} [--root DIR]
 """
 
 from __future__ import annotations
@@ -418,7 +418,8 @@ def gen_timeline(plan: Plan, history: list[Commit], base: str | None, info: Push
     def row(c: Commit) -> str:
         p, m = push_cells(c, info)
         ev = esc(c.trailers.get("Evidence", "")) or EMPTY
-        return f"| {c.date} | {c.short} | {c.trailers['Task']} | {esc(c.subject)} | {ev} | {p} | {m} |"
+        what = c.subject.removeprefix(f"{c.trailers['Task']}: ")
+        return f"| {c.date} | {c.short} | {c.trailers['Task']} | {esc(what)} | {ev} | {p} | {m} |"
 
     order = {c.sha: i for i, c in enumerate(tracked)}
     for b in reversed(plan.batches):
@@ -477,7 +478,10 @@ def generated_base(text: str) -> str | None:
 # ---------------------------------------------------------------- check
 
 
-def check(root: Path) -> list[str]:
+def check(root: Path, pre_commit: bool = False) -> list[str]:
+    """All tracking rules. pre_commit=True skips "done task has a commit",
+    because the commit that finishes a task doesn't exist yet when the
+    pre-commit hook runs; the commit-msg hook checks that one instead."""
     plan = parse_plan(root)
     errors = list(plan.errors)
     nums, dec_text = decision_index(root)
@@ -529,7 +533,7 @@ def check(root: Path) -> list[str]:
             continue
         task_commits.setdefault(tid, []).append(c)
     for t in plan.tasks:
-        if t.status != "done":
+        if t.status != "done" or pre_commit:
             continue
         cs = task_commits.get(t.id, [])
         if not cs:
@@ -565,6 +569,43 @@ def check_generated(root: Path, plan: Plan) -> list[str]:
         expected = gen(plan, commits(root, base) if base else [], base, None)
         if normalise(text) != normalise(expected):
             errors.append(f"{path} does not match the batch files and git; run tools/track.py sync")
+    return errors
+
+
+def check_message(root: Path, text: str) -> list[str]:
+    """Rules for one commit message (the commit-msg hook)."""
+    lines = []
+    for line in text.splitlines():
+        if line.startswith("# ------------------------ >8"):
+            break
+        if not line.startswith("#"):
+            lines.append(line)
+    message = "\n".join(lines).strip()
+    errors = []
+    hit = attribution_hit(message)
+    if hit:
+        errors.append(f"AI attribution in message ('{hit}'); security rule 10")
+    git_dir = Path(git(root, "rev-parse", "--absolute-git-dir").strip())
+    if (git_dir / "MERGE_HEAD").exists():
+        return errors
+    subject = message.splitlines()[0] if message else ""
+    if len(subject) > 72:
+        errors.append(f"subject is {len(subject)} characters; max 72")
+    plan = parse_plan(root)
+    tid = parse_trailers(message).get("Task")
+    if tid is None:
+        errors.append("missing Task: trailer (task ID, backlog X ID or 'meta')")
+        return errors
+    task = plan.task(tid)
+    if not (tid == "meta" or task or (X_ID.match(tid) and tid in plan.backlog_ids)):
+        errors.append(f"Task: {tid} is not a task ID, a backlog X ID or 'meta'")
+        return errors
+    if tid != "meta" and not subject.startswith(f"{tid}: "):
+        errors.append(f"subject must start with '{tid}: '")
+    if task and task.status == "done" and "Evidence" not in parse_trailers(message):
+        earlier = [c for c in commits(root) if c.trailers.get("Task") == tid and "Evidence" in c.trailers]
+        if not earlier:
+            errors.append(f"{tid} is marked done, so this commit needs an Evidence: trailer")
     return errors
 
 
@@ -618,7 +659,9 @@ def report(root: Path, fetch: bool = True) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("command", choices=["check", "sync", "report", "next"])
+    ap.add_argument("command", choices=["check", "sync", "report", "next", "msg"])
+    ap.add_argument("file", nargs="?", help="msg: the commit message file")
+    ap.add_argument("--pre-commit", action="store_true", help="check: run as the pre-commit hook")
     ap.add_argument("--root", default=None, help="repository root (default: from git)")
     ap.add_argument("--no-fetch", action="store_true", help="report: don't fetch origin")
     args = ap.parse_args(argv)
@@ -627,13 +670,22 @@ def main(argv: list[str] | None = None) -> int:
     )
     try:
         if args.command == "check":
-            errors = check(root)
+            errors = check(root, pre_commit=args.pre_commit)
             for e in errors:
                 print(f"✗ {e}", file=sys.stderr)
             if errors:
                 print(f"track.py check: {len(errors)} problem(s)", file=sys.stderr)
                 return 1
             print("track.py check: ok")
+        elif args.command == "msg":
+            if not args.file:
+                ap.error("msg needs the commit message file")
+            errors = check_message(root, Path(args.file).read_text(encoding="utf-8"))
+            for e in errors:
+                print(f"✗ commit message: {e}", file=sys.stderr)
+            if errors:
+                print("Format: '<task ID>: <subject>', blank line, body, blank line, trailers (Task:, Decisions:, Evidence:). See docs/plan/README.md.", file=sys.stderr)
+                return 1
         elif args.command == "sync":
             sync(root, safe_push_info(root))
             print(f"track.py sync: wrote {STATUS} and {TIMELINE}")

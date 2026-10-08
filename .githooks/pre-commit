@@ -1,0 +1,9 @@
+#!/bin/sh
+# Regenerates docs/STATUS.md and docs/TIMELINE.md, stages them, then runs
+# track.py check. gitleaks is added here in B0.5.1.
+# Enable with: git config core.hooksPath .githooks
+set -e
+root="$(git rev-parse --show-toplevel)"
+python3 "$root/tools/track.py" sync >/dev/null
+git add "$root/docs/STATUS.md" "$root/docs/TIMELINE.md"
+python3 "$root/tools/track.py" check --pre-commit

@@ -297,6 +297,69 @@ class Attribution(TrackTestCase):
         self.assertEqual(track.attribution_hit("see claude.md"), "claude")
 
 
+class CommitMessage(TrackTestCase):
+    """The commit-msg hook: track.py msg <file>."""
+
+    def problems(self, text: str) -> list[str]:
+        return track.check_message(self.repo.root, text)
+
+    def assertRejected(self, text: str, fragment: str):
+        errors = self.problems(text)
+        self.assertTrue(any(fragment in e for e in errors), f"expected '{fragment}' in {errors}")
+
+    def test_good_message(self):
+        self.assertEqual(self.problems(msg("B0.1.1: Start one", "B0.1.1")), [])
+        self.assertEqual(self.problems(msg("Tidy the plan", "meta")), [])
+        self.assertEqual(self.problems(msg("X1: Fix thing", "X1")), [])
+
+    def test_no_trailers_rejected(self):
+        self.assertRejected("B0.1.1: Start one\n\nWhy: x.\n", "missing Task: trailer")
+
+    def test_unknown_task_rejected(self):
+        self.assertRejected(msg("B7.1.1: Nope", "B7.1.1"), "not a task ID")
+
+    def test_subject_must_start_with_task_id(self):
+        self.assertRejected(msg("Start one", "B0.1.1"), "subject must start with 'B0.1.1: '")
+
+    def test_subject_length(self):
+        self.assertRejected(msg("B0.1.1: " + "x" * 70, "B0.1.1"), "subject is 78 characters")
+
+    def test_attribution_rejected(self):
+        self.assertRejected(
+            msg("B0.1.1: Start one", "B0.1.1", body="Co-Authored-By: Claude <noreply@anthropic.com>"),
+            "AI attribution",
+        )
+
+    def test_comments_ignored(self):
+        text = msg("B0.1.1: Start one", "B0.1.1") + "# Please enter the commit message\n# Claude\n"
+        self.assertEqual(self.problems(text), [])
+
+    def test_done_needs_evidence(self):
+        self.repo.statuses("done", "todo", "todo")
+        self.assertRejected(msg("B0.1.1: Finish one", "B0.1.1"), "needs an Evidence: trailer")
+        self.assertEqual(self.problems(msg("B0.1.1: Finish one", "B0.1.1", "works")), [])
+
+    def test_done_with_earlier_evidence_ok(self):
+        self.repo.good_history()
+        self.assertEqual(self.problems(msg("B0.1.1: Fix typo", "B0.1.1")), [])
+
+    def test_cli_exit_codes(self):
+        f = self.repo.root / "MSG"
+        f.write_text("Nope\n")
+        self.assertEqual(track.main(["msg", str(f), "--root", str(self.repo.root)]), 1)
+        f.write_text(msg("B0.1.1: Start one", "B0.1.1"))
+        self.assertEqual(track.main(["msg", str(f), "--root", str(self.repo.root)]), 0)
+
+
+class PreCommitMode(TrackTestCase):
+    def test_done_task_allowed_before_its_commit_exists(self):
+        self.repo.good_history()
+        self.repo.statuses("done", "done", "todo")
+        track.sync(self.repo.root)
+        self.assertEqual(track.check(self.repo.root, pre_commit=True), [])
+        self.assertTrue(any("B0.1.2 is done" in e for e in track.check(self.repo.root)))
+
+
 class NextAndReport(TrackTestCase):
     def test_next_respects_dependencies(self):
         plan = track.parse_plan(self.repo.root)
