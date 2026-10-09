@@ -20,7 +20,7 @@ Summary (written when the batch closes): —
 ## B0.3 Project skeleton and CI
 | ID | Task | Decisions | Depends on | Done when | Status |
 |---|---|---|---|---|---|
-| B0.3.1 | Xcode app target: LSUIElement, macOS 14.2 minimum, Apple Silicon only | D2, D3, #35, §6.1 | B0.2 | Empty app builds and shows a menu bar item | doing |
+| B0.3.1 | Xcode app target: LSUIElement, macOS 14.2 minimum, Apple Silicon only | D2, D3, #35, §6.1 | B0.2 | Empty app builds and shows a menu bar item | done |
 | B0.3.2 | Swift package for modules, C target for real-time code, test targets; exact dependency versions, `Package.resolved` committed | D2, #42, #52, #102 | B0.3.1 | `swift test` runs a placeholder test in each target | todo |
 | B0.3.3 | CI (GitHub Actions, macOS runner, one pinned Xcode version): build, unit tests and `track.py check` on every push and PR. Actions pinned to full commit SHAs (the repo enforces this), `permissions: contents: read` | §4.8, security rule 4 | B0.3.2 | CI green on main; a PR with stale tracking files fails; then ask the user to add CI as a required check and set up CodeQL (MAINTAINER-SETUP, later steps); Dependabot commits pass `track.py check` (X2) | todo |
 
