@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A10000000000000000000010 /* MD3Core in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000011 /* MD3Core */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		A10000000000000000000001 /* md3.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = md3.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -19,6 +23,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000010 /* MD3Core in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -60,6 +65,9 @@
 				A10000000000000000000002 /* md3 */,
 			);
 			name = md3;
+			packageProductDependencies = (
+				A10000000000000000000011 /* MD3Core */,
+			);
 			productName = md3;
 			productReference = A10000000000000000000001 /* md3.app */;
 			productType = "com.apple.product-type.application";
@@ -83,6 +91,9 @@
 			);
 			mainGroup = A10000000000000000000004;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A10000000000000000000012 /* XCLocalSwiftPackageReference "." */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A10000000000000000000005 /* Products */;
 			projectDirPath = "";
@@ -223,6 +234,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A10000000000000000000012 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10000000000000000000011 /* MD3Core */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MD3Core;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A1000000000000000000000A /* Project object */;
 }
