@@ -18,13 +18,13 @@ Tech 3341 (2023) Table 1 and Tech 3342 (2023) define the test cases. Only 3341 #
 4. **Real programme recordings** (3341 #7–#8, 3342 #5–#6): tested only in the local run, against their Tech 3341 / 3342 expected values; the numbers go in the commit's `Evidence:` trailer.
 5. **B3.2.3's finish line** (replaces "CI jobs green"): generated vectors pass in CI; the official EBU set, including 3341 #7–#8 and 3342 #5–#6, passes a local run on the maintainer's Mac, with the agreement test above, and the numbers in `Evidence:`; chunk-size bit-identity is green in CI.
 6. **"EBU Mode" claim:** md3 claims "EBU Mode" compliance (Tech 3341) only on the basis of the full official EBU set passing in a local run on the maintainer's Mac, recorded with the date, md3 version and algorithm versions.
-7. **Asking EBU (in parallel):** the maintainer asks EBU whether the official files may be used in public CI. Until a written answer allows it, points 2–5 stand; a permission would be recorded as a new decision.
+7. ~~**Asking EBU (in parallel):** the maintainer asks EBU whether the official files may be used in public CI. Until a written answer allows it, points 2–5 stand; a permission would be recorded as a new decision.~~ **Removed by #178 (2026-10-09):** EBU is not asked; the official files stay local-only.
 8. **Credit:** reports and documentation that mention the official files credit "© EBU".
 
 ## Gain and cost
 
 - Gain: md3 respects EBU's terms while still testing against the official files, and CI tests every case that can be generated.
-- Cost: the four programme recordings and the agreement test are checked locally, not on every CI run; a regression in those cases is caught at the next local run (at least once per loudness-engine change in B3 and before each release).
+- Cost: the two programme recordings (four test cases) and the agreement test are checked locally, not on every CI run; a regression in those cases is caught at the next local run (at least once per loudness-engine change in B3 and before each release).
 
 ## Test against the standard method
 
