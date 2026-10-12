@@ -932,3 +932,4 @@ Every decision made or changed during the build phase gets one row here, numbere
 
 | # | Date | Task | Old text | New decision | Why |
 |---|---|---|---|---|---|
+| ✅ 177 | 2026-10-09 | B0.3.3 | — (new) | **CI dependency and machine.** CI uses one GitHub Action, `actions/checkout` v7.0.1 (MIT), pinned to commit `3d3c42e5aac5ba805825da76410c181273ba90b1`; everything else is plain commands. Jobs run on GitHub's `xcode-27` image (public preview; not the paid xlarge label) with `/Applications/Xcode_27.0.app` selected explicitly, and fail unless `xcodebuild -version` reports Xcode 27.0 (27A266a), the maintainer's version. Revisit when a regular macOS 27 image ships. | Security rule 3 requires approval for every CI dependency; an exact Xcode match keeps CI and local builds identical. Approved by the maintainer (option A) after the auditor's cross-check. |
