@@ -11,6 +11,7 @@ Usage: python3 tools/track.py {check,sync,report,next,msg FILE} [--root DIR]
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import subprocess
@@ -224,6 +225,7 @@ class Commit:
     message: str
     parents: list[str]
     trailers: dict[str, str]
+    author_email: str = ""
 
     @property
     def short(self) -> str:
@@ -264,16 +266,63 @@ def commits(root: Path, rev: str = "HEAD") -> list[Commit]:
         return []
     raw = git(
         root, "log", "--reverse", "--topo-order", "--date=short",
-        "--format=%H%x1f%P%x1f%ad%x1f%s%x1f%B%x1e", rev,
+        "--format=%H%x1f%P%x1f%ad%x1f%ae%x1f%s%x1f%B%x1e", rev,
     )
     result = []
     for rec in raw.split("\x1e"):
         rec = rec.strip("\n")
         if not rec:
             continue
-        sha, parents, date, subject, body = rec.split("\x1f", 4)
-        result.append(Commit(sha, date, subject, body, parents.split(), parse_trailers(body)))
+        sha, parents, date, email, subject, body = rec.split("\x1f", 5)
+        result.append(Commit(sha, date, subject, body, parents.split(), parse_trailers(body), email))
     return result
+
+
+# X2: Dependabot's commits can't carry a Task: trailer. They are exempt from
+# the Task rules (never from the attribution check) only when GitHub itself
+# says the commit is signed and verified and belongs to the dependabot[bot]
+# account; the author e-mail alone can be faked. No answer from GitHub means
+# no exemption.
+DEPENDABOT_EMAIL = "49699333+dependabot[bot]@users.noreply.github.com"
+
+
+def dependabot_verified(api_commit: dict) -> bool:
+    """Decide from GitHub's REST 'get a commit' response."""
+    verification = (api_commit.get("commit") or {}).get("verification") or {}
+    author = api_commit.get("author") or {}
+    return verification.get("verified") is True and author.get("login") == "dependabot[bot]"
+
+
+def github_repo(root: Path) -> str | None:
+    try:
+        url = git(root, "remote", "get-url", "origin").strip()
+    except TrackError:
+        return None
+    m = re.search(r"github\.com[:/]([\w.-]+/[\w.-]+?)(?:\.git)?$", url)
+    return m.group(1) if m else None
+
+
+def verify_bot_commit(root: Path, sha: str) -> bool:
+    repo = github_repo(root)
+    if repo is None or not re.fullmatch(r"[0-9a-f]{40}", sha):
+        return False
+    try:
+        out = subprocess.run(
+            ["gh", "api", f"repos/{repo}/commits/{sha}"],
+            cwd=root, capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    if out.returncode != 0:
+        return False
+    try:
+        return dependabot_verified(json.loads(out.stdout))
+    except ValueError:
+        return False
+
+
+def exempt_bot_commit(root: Path, c: Commit) -> bool:
+    return c.author_email == DEPENDABOT_EMAIL and verify_bot_commit(root, c.sha)
 
 
 def head(root: Path) -> str | None:
@@ -594,6 +643,8 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
         if c.is_merge:
             continue
         tid = c.trailers.get("Task")
+        if tid is None and exempt_bot_commit(root, c):
+            continue
         if tid is None:
             errors.append(f"commit {c.short} '{c.subject}': missing Task: trailer")
             continue
