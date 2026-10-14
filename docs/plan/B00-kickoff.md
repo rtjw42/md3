@@ -49,3 +49,4 @@ Summary (written when the batch closes): —
 - 2026-10-08 B0.4.2: the 11 DOC items (13 result rows in docs/M0-RESULTS.md) checked against primary sources: 11 rows confirmed, 1 partly (Logic L-only diagonal undocumented; hands-on check in B6.3.2), 1 failed (Faraldo profile licence not cleared → proposal #173).
 - 2026-10-08 Cross-check #173: APPROVE
 - 2026-10-08 Cross-check #174–#176: reviewed by the auditor; maintainer approved #174 and #175, and #176 with five changes (applied)
+- 2026-10-14 Cross-check #178: APPROVE
