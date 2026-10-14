@@ -709,8 +709,9 @@ def check_generated(root: Path, plan: Plan) -> list[str]:
         if not base_ok:
             errors.append(
                 f"{path} was generated at {base[:7] if base else 'no commit'}, which is stale "
-                "(after an amend or rebase the hook's base commit is gone): run tools/track.py sync "
-                "and commit the result; prefer a new commit over --amend"
+                "(a commit was made without the hooks, or an amend or rebase replaced the commit "
+                "the hook generated against): run tools/track.py sync and commit the result; "
+                "prefer a new commit over --amend"
             )
             continue
         expected = gen(plan, commits(root, base) if base else [], base, None)

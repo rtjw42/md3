@@ -324,7 +324,8 @@ class ReviewFixes(TrackTestCase):
         track.sync(self.repo.root)
         self.repo.git("add", "-A")
         self.repo.git("commit", "-q", "--amend", "--no-edit")
-        self.assertProblem("after an amend or rebase")
+        self.assertProblem("an amend or rebase replaced the commit")
+        self.assertProblem("a commit was made without the hooks")
 
     def test_bad_banner_hash_rejected(self):
         self.repo.good_history()
