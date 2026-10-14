@@ -5,7 +5,7 @@
 
 ## Position
 
-- Doing: **B0.3.3** CI (GitHub Actions, macOS runner, one pinned Xcode version): build, unit tests and `track.py check` on every push and PR. Actions pinned to full commit SHAs (the repo enforces this), `permissions: contents: read` (B0 stage 3 / 5, 9 / 19 tasks)
+- Doing: (hand-edited to test that CI rejects stale tracking files)
 - Next: **B0.4.1** Commit the simulation scripts under `tools/` with a README (ask the user where they are; they're in the review status doc's appendix)
 - Next cross-check: at the end of B0 Build-phase kickoff
 - Overall: ▓░░░░░░░░░ 9 / 118 tasks
