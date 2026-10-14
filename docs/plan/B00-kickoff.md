@@ -22,7 +22,7 @@ Summary (written when the batch closes): —
 |---|---|---|---|---|---|
 | B0.3.1 | Xcode app target: LSUIElement, macOS 14.2 minimum, Apple Silicon only | D2, D3, #35, §6.1 | B0.2 | Empty app builds and shows a menu bar item | done |
 | B0.3.2 | Swift package for modules, C target for real-time code, test targets; exact dependency versions, `Package.resolved` committed | D2, #42, #52, #102 | B0.3.1 | `swift test` runs a placeholder test in each target | done |
-| B0.3.3 | CI (GitHub Actions, macOS runner, one pinned Xcode version): build, unit tests and `track.py check` on every push and PR. Actions pinned to full commit SHAs (the repo enforces this), `permissions: contents: read` | §4.8, security rule 4 | B0.3.2 | CI green on main; a PR with stale tracking files fails; then ask the user to add CI as a required check and set up CodeQL (MAINTAINER-SETUP, later steps); Dependabot commits pass `track.py check` (X2) | done |
+| B0.3.3 | CI (GitHub Actions, macOS runner, one pinned Xcode version): build, unit tests and `track.py check` on every push and PR. Actions pinned to full commit SHAs (the repo enforces this), `permissions: contents: read` | §4.8, security rule 4 | B0.3.2 | CI green on main; a PR with stale tracking files fails; then ask the user to add CI as a required check and set up CodeQL (MAINTAINER-SETUP, later steps); Dependabot commits pass `track.py check` (X2) | doing |
 
 ## B0.4 Evidence carried over
 | ID | Task | Decisions | Depends on | Done when | Status |
@@ -50,3 +50,4 @@ Summary (written when the batch closes): —
 - 2026-10-14 Cross-check #177: APPROVE
 - 2026-10-14 Cross-check X2: APPROVE WITH CONDITIONS (committer web-flow + reason valid required; realistic impostor test; GH_TOKEN only on the tracking step; HANDOFF rewritten) — applied
 - 2026-10-14 B0.3.3: stale-tracking demo PR #3 (branch ci-test-stale, closed): CI's Tracking check failed on hand-edited STATUS/TIMELINE as required. "CI green on main" is confirmed after the B0.3 merge.
+- 2026-10-14 B0.3.3: back to doing after stage review: Dependabot merges still failed the stale-files check, and "CI green on main" can only be shown after merge. Marked done in the next stage once main is green.

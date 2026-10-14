@@ -287,11 +287,17 @@ def commits(root: Path, rev: str = "HEAD") -> list[Commit]:
 DEPENDABOT_EMAIL = "49699333+dependabot[bot]@users.noreply.github.com"
 
 
-def dependabot_verified(api_commit: dict) -> bool:
-    """Decide from GitHub's REST 'get a commit' response."""
-    verification = (api_commit.get("commit") or {}).get("verification") or {}
-    author = api_commit.get("author") or {}
-    committer = api_commit.get("committer") or {}
+def dependabot_verified(api_commit: object) -> bool:
+    """Decide from GitHub's REST 'get a commit' response. Any unexpected
+    shape fails closed (untrusted input, security rule 5)."""
+
+    def obj(value: object) -> dict:
+        return value if isinstance(value, dict) else {}
+
+    data = obj(api_commit)
+    verification = obj(obj(data.get("commit")).get("verification"))
+    author = obj(data.get("author"))
+    committer = obj(data.get("committer"))
     return (
         verification.get("verified") is True
         and verification.get("reason") == "valid"
@@ -305,11 +311,21 @@ def github_repo(root: Path) -> str | None:
         url = git(root, "remote", "get-url", "origin").strip()
     except TrackError:
         return None
-    m = re.search(r"github\.com[:/]([\w.-]+/[\w.-]+?)(?:\.git)?$", url)
+    m = re.search(r"github\.com(?::\d+)?[:/]([\w.-]+/[\w.-]+?)(?:\.git)?/?$", url)
     return m.group(1) if m else None
 
 
+_verified_cache: dict[tuple[str, str], bool] = {}
+
+
 def verify_bot_commit(root: Path, sha: str) -> bool:
+    key = (str(root), sha)
+    if key not in _verified_cache:
+        _verified_cache[key] = _ask_github(root, sha)
+    return _verified_cache[key]
+
+
+def _ask_github(root: Path, sha: str) -> bool:
     repo = github_repo(root)
     if repo is None or not re.fullmatch(r"[0-9a-f]{40}", sha):
         return False
@@ -328,8 +344,23 @@ def verify_bot_commit(root: Path, sha: str) -> bool:
         return False
 
 
-def exempt_bot_commit(root: Path, c: Commit) -> bool:
-    return c.author_email == DEPENDABOT_EMAIL and verify_bot_commit(root, c.sha)
+def on_origin_main(root: Path, sha: str) -> bool:
+    try:
+        git(root, "merge-base", "--is-ancestor", sha, "refs/remotes/origin/main")
+        return True
+    except TrackError:
+        return False
+
+
+def exempt_bot_commit(root: Path, sha: str, email: str, local: bool = False) -> bool:
+    """local=True (pre-commit): a bot commit already on origin/main was
+    verified by CI before it merged, so it's trusted without a network call.
+    CI always asks GitHub."""
+    if email != DEPENDABOT_EMAIL:
+        return False
+    if local and on_origin_main(root, sha):
+        return True
+    return verify_bot_commit(root, sha)
 
 
 def head(root: Path) -> str | None:
@@ -650,7 +681,7 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
         if c.is_merge:
             continue
         tid = c.trailers.get("Task")
-        if tid is None and exempt_bot_commit(root, c):
+        if tid is None and exempt_bot_commit(root, c.sha, c.author_email, local=pre_commit):
             continue
         if tid is None:
             errors.append(f"commit {c.short} '{c.subject}': missing Task: trailer")
@@ -670,7 +701,7 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
         elif not any("Evidence" in c.trailers for c in cs):
             errors.append(f"{t.file}:{t.line}: {t.id} is done but none of its commits has an Evidence: trailer")
 
-    errors += check_generated(root, plan)
+    errors += check_generated(root, plan, pre_commit)
     return errors
 
 
@@ -682,7 +713,7 @@ def read_plain(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def check_generated(root: Path, plan: Plan) -> list[str]:
+def check_generated(root: Path, plan: Plan, pre_commit: bool = False) -> list[str]:
     errors = []
     current = head(root)
     for path, gen in ((STATUS, gen_status), (TIMELINE, gen_timeline)):
@@ -705,7 +736,7 @@ def check_generated(root: Path, plan: Plan) -> list[str]:
             base_ok = current is None
             base = None
         else:
-            base_ok = current is not None and allowed_base(root, base, current)
+            base_ok = current is not None and allowed_base(root, base, current, local=pre_commit)
         if not base_ok:
             errors.append(
                 f"{path} was generated at {base[:7] if base else 'no commit'}, which is stale "
@@ -757,7 +788,7 @@ def check_message(root: Path, text: str) -> list[str]:
     return errors
 
 
-def allowed_base(root: Path, base: str, current: str) -> bool:
+def allowed_base(root: Path, base: str, current: str, local: bool = False) -> bool:
     """The generated files may lag HEAD by the commit that contains them
     (the pre-commit hook runs before the commit exists) and by merge commits
     made on GitHub, which don't run the hook."""
@@ -773,6 +804,11 @@ def allowed_base(root: Path, base: str, current: str) -> bool:
         revs += ["--not", parents[0]]
     newer = [line.split() for line in git(root, "rev-list", "--parents", *revs).splitlines()]
     plain = [ids for ids in newer if len(ids) == 2]
+    # Verified Dependabot commits never run the hook (X2); they don't count.
+    plain = [
+        ids for ids in plain
+        if not exempt_bot_commit(root, ids[0], git(root, "show", "-s", "--format=%ae", ids[0]).strip(), local)
+    ]
     # At most one ordinary commit: the one the hook generated the files for.
     return not plain or (len(plain) == 1 and plain[0][1] == base)
 

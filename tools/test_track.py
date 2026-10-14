@@ -372,7 +372,7 @@ class DependabotCommits(TrackTestCase):
         self.bot_commit("Bump actions/checkout from 7.0.0 to 7.0.1")
         with mock.patch.object(track, "verify_bot_commit", return_value=False) as v:
             errors = self.repo.errors()
-        v.assert_called_once()
+        v.assert_called()
         self.assertTrue(any("missing Task: trailer" in e for e in errors), errors)
 
     def test_verified_bot_commit_exempt_from_task_rule(self):
@@ -422,6 +422,61 @@ class DependabotCommits(TrackTestCase):
         self.assertFalse(track.dependabot_verified(impostor))
         self.assertFalse(track.dependabot_verified(
             {**self.REAL, "commit": {"verification": {"verified": True, "reason": "expired_key"}}}))
+
+    def test_merged_bot_commit_not_flagged_stale(self):
+        # Dependabot never regenerates STATUS/TIMELINE; merging its PR must
+        # not make the generated files look stale.
+        self.repo.good_history()
+        self.repo.git("checkout", "-q", "-b", "dependabot/x")
+        self.repo.git("commit", "-q", "--allow-empty", "--author", self.BOT, "-m", "Bump x")
+        self.repo.git("checkout", "-q", "main")
+        self.repo.git("merge", "-q", "--no-ff", "-m", "Merge pull request #9 from dependabot/x", "dependabot/x")
+        with mock.patch.object(track, "verify_bot_commit", return_value=True):
+            self.assertEqual(self.repo.errors(), [])
+        with mock.patch.object(track, "verify_bot_commit", return_value=False):
+            self.assertTrue(any("stale" in e for e in self.repo.errors()))
+
+    def test_pre_commit_trusts_bot_commits_already_on_main(self):
+        # Locally, a bot commit already on origin/main was verified by CI
+        # before merge, so no GitHub lookup is needed (works offline).
+        self.repo.good_history()
+        self.bot_commit("Bump x")
+        self.repo.git("update-ref", "refs/remotes/origin/main", "HEAD")
+        with mock.patch.object(track, "verify_bot_commit", side_effect=AssertionError("network")):
+            errors = track.check(self.repo.root, pre_commit=True)
+        self.assertFalse(any("Task" in e for e in errors), errors)
+
+    def test_pre_commit_still_verifies_bot_commits_not_on_main(self):
+        self.repo.good_history()
+        self.bot_commit("Bump x")
+        with mock.patch.object(track, "verify_bot_commit", return_value=False) as v:
+            errors = track.check(self.repo.root, pre_commit=True)
+        v.assert_called()
+        self.assertTrue(any("missing Task" in e for e in errors), errors)
+
+    def test_ci_ignores_origin_main_shortcut(self):
+        self.repo.good_history()
+        self.bot_commit("Bump x")
+        self.repo.git("update-ref", "refs/remotes/origin/main", "HEAD")
+        with mock.patch.object(track, "verify_bot_commit", return_value=False):
+            self.assertTrue(any("missing Task" in e for e in self.repo.errors()))
+
+    def test_malformed_github_responses_fail_closed(self):
+        for bad in [[], "x", {"commit": "x"}, {"commit": {"verification": []}}, {"author": "x", "committer": 3}]:
+            with self.subTest(bad=bad):
+                self.assertFalse(track.dependabot_verified(bad))
+
+    def test_github_repo_url_forms(self):
+        for url in [
+            "git@github.com:rtjw42/md3.git",
+            "https://github.com/rtjw42/md3",
+            "https://github.com/rtjw42/md3.git/",
+            "ssh://git@ssh.github.com:443/rtjw42/md3.git",
+        ]:
+            with self.subTest(url=url):
+                self.repo.git("remote", "remove", "origin") if "origin" in self.repo.git("remote") else None
+                self.repo.git("remote", "add", "origin", url)
+                self.assertEqual(track.github_repo(self.repo.root), "rtjw42/md3")
 
     def test_no_github_no_exemption(self):
         # The fixture repo has no GitHub remote, so verification must fail closed.
