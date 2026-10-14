@@ -280,9 +280,10 @@ def commits(root: Path, rev: str = "HEAD") -> list[Commit]:
 
 # X2: Dependabot's commits can't carry a Task: trailer. They are exempt from
 # the Task rules (never from the attribution check) only when GitHub itself
-# says the commit is signed and verified and belongs to the dependabot[bot]
-# account; the author e-mail alone can be faked. No answer from GitHub means
-# no exemption.
+# committed and signed them: committer web-flow, verification valid, author
+# the dependabot[bot] account. "Verified" alone only proves who committed and
+# signed, and anyone can name Dependabot as author, so all three are needed.
+# No answer from GitHub means no exemption.
 DEPENDABOT_EMAIL = "49699333+dependabot[bot]@users.noreply.github.com"
 
 
@@ -290,7 +291,13 @@ def dependabot_verified(api_commit: dict) -> bool:
     """Decide from GitHub's REST 'get a commit' response."""
     verification = (api_commit.get("commit") or {}).get("verification") or {}
     author = api_commit.get("author") or {}
-    return verification.get("verified") is True and author.get("login") == "dependabot[bot]"
+    committer = api_commit.get("committer") or {}
+    return (
+        verification.get("verified") is True
+        and verification.get("reason") == "valid"
+        and committer.get("login") == "web-flow"
+        and author.get("login") == "dependabot[bot]"
+    )
 
 
 def github_repo(root: Path) -> str | None:

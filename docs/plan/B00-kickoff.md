@@ -47,3 +47,5 @@ Summary (written when the batch closes): —
 - 2026-10-08 B0.1.3: task rows restored verbatim from the plan after review; only Depends on, Status and the B4.2.3 "see X1" pointer are additions.
 - 2026-10-08 B0.3.3: scope extended by the user to handle X2 (Dependabot commits in `track.py check`), moved from B0.5.3.
 - 2026-10-09 B0.3.2: no third-party packages yet, so no Package.resolved; each #42 dependency is added, pinned exactly and licence-checked (#174) by the task that first uses it.
+- 2026-10-14 Cross-check #177: APPROVE
+- 2026-10-14 Cross-check X2: APPROVE WITH CONDITIONS (committer web-flow + reason valid required; realistic impostor test; GH_TOKEN only on the tracking step; HANDOFF rewritten) — applied

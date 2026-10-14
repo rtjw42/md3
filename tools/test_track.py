@@ -395,12 +395,32 @@ class DependabotCommits(TrackTestCase):
         v.assert_not_called()
         self.assertTrue(any("missing Task: trailer" in e for e in errors), errors)
 
+    # Shape of a real Dependabot commit, from GitHub's API (actions/checkout PR 2590).
+    REAL = {
+        "commit": {"verification": {"verified": True, "reason": "valid"}},
+        "author": {"login": "dependabot[bot]"},
+        "committer": {"login": "web-flow"},
+    }
+
     def test_github_response_rules(self):
-        ok = {"commit": {"verification": {"verified": True}}, "author": {"login": "dependabot[bot]"}}
-        self.assertTrue(track.dependabot_verified(ok))
-        self.assertFalse(track.dependabot_verified({**ok, "author": {"login": "someone"}}))
-        self.assertFalse(track.dependabot_verified({**ok, "commit": {"verification": {"verified": False}}}))
+        self.assertTrue(track.dependabot_verified(self.REAL))
+        self.assertFalse(track.dependabot_verified({**self.REAL, "author": {"login": "someone"}}))
+        self.assertFalse(track.dependabot_verified(
+            {**self.REAL, "commit": {"verification": {"verified": False, "reason": "unsigned"}}}))
         self.assertFalse(track.dependabot_verified({"author": None, "commit": {}}))
+
+    def test_realistic_impostor_signed_with_own_key_fails(self):
+        # Someone names Dependabot as author and signs with their own key:
+        # GitHub shows it verified, authored by dependabot[bot], but committed
+        # by them, not by GitHub (web-flow).
+        impostor = {
+            "commit": {"verification": {"verified": True, "reason": "valid"}},
+            "author": {"login": "dependabot[bot]"},
+            "committer": {"login": "mallory"},
+        }
+        self.assertFalse(track.dependabot_verified(impostor))
+        self.assertFalse(track.dependabot_verified(
+            {**self.REAL, "commit": {"verification": {"verified": True, "reason": "expired_key"}}}))
 
     def test_no_github_no_exemption(self):
         # The fixture repo has no GitHub remote, so verification must fail closed.
