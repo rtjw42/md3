@@ -11,7 +11,6 @@ Usage: python3 tools/track.py {check,sync,report,next,msg FILE} [--root DIR]
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import re
 import subprocess
@@ -279,69 +278,25 @@ def commits(root: Path, rev: str = "HEAD") -> list[Commit]:
 
 
 # X2: Dependabot's commits can't carry a Task: trailer. They are exempt from
-# the Task rules (never from the attribution check) only when GitHub itself
-# committed and signed them: committer web-flow, verification valid, author
-# the dependabot[bot] account. "Verified" alone only proves who committed and
-# signed, and anyone can name Dependabot as author, so all three are needed.
-# No answer from GitHub means no exemption.
+# the Task rules (never from the attribution check) only when all hold:
+# - the author is Dependabot's address and the commit changes dependency
+#   files only (workflows, Dependabot config, Package.swift/.resolved);
+# - and either it is already on origin/main (it passed review and CI on the
+#   protected branch), or this is a GitHub Actions run started by Dependabot
+#   itself (GITHUB_ACTOR is set by GitHub; a fork can't claim it).
+# The author address alone can be faked, and so can a GitHub-signed commit
+# naming Dependabot (web editor or contents API), so neither is enough.
 DEPENDABOT_EMAIL = "49699333+dependabot[bot]@users.noreply.github.com"
+DEPENDABOT_ACTOR = "dependabot[bot]"
+DEPENDENCY_FILE = re.compile(
+    r"\.github/workflows/[^/]+\.ya?ml|\.github/dependabot\.ya?ml|Package\.swift|(?:.+/)?Package\.resolved"
+)
 
 
-def dependabot_verified(api_commit: object) -> bool:
-    """Decide from GitHub's REST 'get a commit' response. Any unexpected
-    shape fails closed (untrusted input, security rule 5)."""
-
-    def obj(value: object) -> dict:
-        return value if isinstance(value, dict) else {}
-
-    data = obj(api_commit)
-    verification = obj(obj(data.get("commit")).get("verification"))
-    author = obj(data.get("author"))
-    committer = obj(data.get("committer"))
-    return (
-        verification.get("verified") is True
-        and verification.get("reason") == "valid"
-        and committer.get("login") == "web-flow"
-        and author.get("login") == "dependabot[bot]"
-    )
-
-
-def github_repo(root: Path) -> str | None:
-    try:
-        url = git(root, "remote", "get-url", "origin").strip()
-    except TrackError:
-        return None
-    m = re.search(r"github\.com(?::\d+)?[:/]([\w.-]+/[\w.-]+?)(?:\.git)?/?$", url)
-    return m.group(1) if m else None
-
-
-_verified_cache: dict[tuple[str, str], bool] = {}
-
-
-def verify_bot_commit(root: Path, sha: str) -> bool:
-    key = (str(root), sha)
-    if key not in _verified_cache:
-        _verified_cache[key] = _ask_github(root, sha)
-    return _verified_cache[key]
-
-
-def _ask_github(root: Path, sha: str) -> bool:
-    repo = github_repo(root)
-    if repo is None or not re.fullmatch(r"[0-9a-f]{40}", sha):
-        return False
-    try:
-        out = subprocess.run(
-            ["gh", "api", f"repos/{repo}/commits/{sha}"],
-            cwd=root, capture_output=True, text=True, timeout=30,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return False
-    if out.returncode != 0:
-        return False
-    try:
-        return dependabot_verified(json.loads(out.stdout))
-    except ValueError:
-        return False
+def only_dependency_files(root: Path, sha: str) -> bool:
+    names = git(root, "diff-tree", "-z", "--no-commit-id", "--name-only", "-r", "--root", sha).split("\0")
+    names = [n for n in names if n]
+    return bool(names) and all(DEPENDENCY_FILE.fullmatch(n) for n in names)
 
 
 def on_origin_main(root: Path, sha: str) -> bool:
@@ -352,15 +307,14 @@ def on_origin_main(root: Path, sha: str) -> bool:
         return False
 
 
-def exempt_bot_commit(root: Path, sha: str, email: str, local: bool = False) -> bool:
-    """local=True (pre-commit): a bot commit already on origin/main was
-    verified by CI before it merged, so it's trusted without a network call.
-    CI always asks GitHub."""
-    if email != DEPENDABOT_EMAIL:
+def dependabot_run() -> bool:
+    return os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("GITHUB_ACTOR") == DEPENDABOT_ACTOR
+
+
+def exempt_bot_commit(root: Path, sha: str, email: str) -> bool:
+    if email != DEPENDABOT_EMAIL or not only_dependency_files(root, sha):
         return False
-    if local and on_origin_main(root, sha):
-        return True
-    return verify_bot_commit(root, sha)
+    return on_origin_main(root, sha) or dependabot_run()
 
 
 def head(root: Path) -> str | None:
@@ -681,10 +635,15 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
         if c.is_merge:
             continue
         tid = c.trailers.get("Task")
-        if tid is None and exempt_bot_commit(root, c.sha, c.author_email, local=pre_commit):
+        if tid is None and exempt_bot_commit(root, c.sha, c.author_email):
             continue
         if tid is None:
-            errors.append(f"commit {c.short} '{c.subject}': missing Task: trailer")
+            hint = (
+                " (Dependabot commits are exempt only once on origin/main or in Dependabot's own"
+                " CI run, and only when they change dependency files)"
+                if c.author_email == DEPENDABOT_EMAIL else ""
+            )
+            errors.append(f"commit {c.short} '{c.subject}': missing Task: trailer{hint}")
             continue
         if not (tid == "meta" or tid in all_task_ids or (X_ID.match(tid) and tid in plan.backlog_ids)):
             errors.append(f"commit {c.short}: Task: {tid} is not a task ID, a backlog X ID or 'meta'")
@@ -701,7 +660,7 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
         elif not any("Evidence" in c.trailers for c in cs):
             errors.append(f"{t.file}:{t.line}: {t.id} is done but none of its commits has an Evidence: trailer")
 
-    errors += check_generated(root, plan, pre_commit)
+    errors += check_generated(root, plan)
     return errors
 
 
@@ -713,7 +672,7 @@ def read_plain(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def check_generated(root: Path, plan: Plan, pre_commit: bool = False) -> list[str]:
+def check_generated(root: Path, plan: Plan) -> list[str]:
     errors = []
     current = head(root)
     for path, gen in ((STATUS, gen_status), (TIMELINE, gen_timeline)):
@@ -736,7 +695,7 @@ def check_generated(root: Path, plan: Plan, pre_commit: bool = False) -> list[st
             base_ok = current is None
             base = None
         else:
-            base_ok = current is not None and allowed_base(root, base, current, local=pre_commit)
+            base_ok = current is not None and allowed_base(root, base, current)
         if not base_ok:
             errors.append(
                 f"{path} was generated at {base[:7] if base else 'no commit'}, which is stale "
@@ -788,7 +747,7 @@ def check_message(root: Path, text: str) -> list[str]:
     return errors
 
 
-def allowed_base(root: Path, base: str, current: str, local: bool = False) -> bool:
+def allowed_base(root: Path, base: str, current: str) -> bool:
     """The generated files may lag HEAD by the commit that contains them
     (the pre-commit hook runs before the commit exists) and by merge commits
     made on GitHub, which don't run the hook."""
@@ -802,13 +761,13 @@ def allowed_base(root: Path, base: str, current: str, local: bool = False) -> bo
     parents = git(root, "rev-list", "--parents", "-n", "1", current).split()[1:]
     if len(parents) > 1:  # a merge: ignore what main already had
         revs += ["--not", parents[0]]
-    newer = [line.split() for line in git(root, "rev-list", "--parents", *revs).splitlines()]
-    plain = [ids for ids in newer if len(ids) == 2]
-    # Verified Dependabot commits never run the hook (X2); they don't count.
-    plain = [
-        ids for ids in plain
-        if not exempt_bot_commit(root, ids[0], git(root, "show", "-s", "--format=%ae", ids[0]).strip(), local)
-    ]
+    plain = []
+    for line in git(root, "log", "--format=%H %P%x1f%ae", *revs).splitlines():
+        ids, email = line.split("\x1f")
+        ids = ids.split()
+        # Exempt Dependabot commits never run the hook (X2); they don't count.
+        if len(ids) == 2 and not exempt_bot_commit(root, ids[0], email):
+            plain.append(ids)
     # At most one ordinary commit: the one the hook generated the files for.
     return not plain or (len(plain) == 1 and plain[0][1] == base)
 

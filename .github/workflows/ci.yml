@@ -36,9 +36,6 @@ jobs:
           fi
 
       - name: Tracking check
-        env:
-          # Read-only token, only for track.py's Dependabot verification (X2).
-          GH_TOKEN: ${{ github.token }}
         run: python3 tools/track.py check
 
       - name: Tracker unit tests

@@ -122,6 +122,9 @@ class TrackTestCase(unittest.TestCase):
             "GIT_AUTHOR_EMAIL": "test@example.invalid",
             "GIT_COMMITTER_NAME": "Test",
             "GIT_COMMITTER_EMAIL": "test@example.invalid",
+            # Not a CI run, even when the suite itself runs in CI.
+            "GITHUB_ACTIONS": "",
+            "GITHUB_ACTOR": "",
         }
         cls.env = mock.patch.dict(os.environ, env)
         cls.env.start()
@@ -358,129 +361,104 @@ class ReviewFixes(TrackTestCase):
 
 
 class DependabotCommits(TrackTestCase):
-    """X2: only GitHub-verified Dependabot commits skip the Task rules."""
+    """X2: Dependabot commits skip the Task rules only when they change
+    dependency files and are on origin/main or in Dependabot's own CI run."""
 
     BOT = f"dependabot[bot] <{track.DEPENDABOT_EMAIL}>"
+    DEPENDABOT_RUN = {"GITHUB_ACTIONS": "true", "GITHUB_ACTOR": "dependabot[bot]"}
 
-    def bot_commit(self, message: str) -> None:
-        track.sync(self.repo.root)
-        self.repo.git("add", "-A")
-        self.repo.git("commit", "-q", "--allow-empty", "--author", self.BOT, "-m", message)
+    def bot_commit(self, message: str = "Bump x", path: str = "Package.swift", author: str = BOT) -> None:
+        # Like Dependabot: no hook, so STATUS/TIMELINE aren't regenerated.
+        f = self.repo.root / path
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(f.read_text() + "x\n" if f.exists() else "x\n")
+        self.repo.git("add", path)
+        self.repo.git("commit", "-q", "--author", author, "-m", message)
 
-    def test_impostor_with_bot_email_still_fails(self):
-        self.repo.good_history()
-        self.bot_commit("Bump actions/checkout from 7.0.0 to 7.0.1")
-        with mock.patch.object(track, "verify_bot_commit", return_value=False) as v:
-            errors = self.repo.errors()
-        v.assert_called()
+    def on_main(self) -> None:
+        self.repo.git("update-ref", "refs/remotes/origin/main", "HEAD")
+
+    def assertTaskError(self, errors: list[str]) -> None:
         self.assertTrue(any("missing Task: trailer" in e for e in errors), errors)
 
-    def test_verified_bot_commit_exempt_from_task_rule(self):
-        self.repo.good_history()
-        self.bot_commit("Bump actions/checkout from 7.0.0 to 7.0.1")
-        with mock.patch.object(track, "verify_bot_commit", return_value=True):
-            errors = self.repo.errors()
-        self.assertFalse(any("Task" in e for e in errors), errors)
+    def assertClean(self, errors: list[str]) -> None:
+        self.assertEqual(errors, [])
 
-    def test_verified_bot_commit_still_checked_for_attribution(self):
+    def test_impostor_with_bot_email_fails(self):
+        self.repo.good_history()
+        self.bot_commit()
+        errors = self.repo.errors()
+        self.assertTaskError(errors)
+        self.assertTrue(any("Dependabot commits are exempt only" in e for e in errors), errors)
+
+    def test_exempt_in_dependabot_ci_run(self):
+        self.repo.good_history()
+        self.bot_commit()
+        with mock.patch.dict(os.environ, self.DEPENDABOT_RUN):
+            self.assertClean(self.repo.errors())
+
+    def test_actor_outside_github_actions_not_trusted(self):
+        self.repo.good_history()
+        self.bot_commit()
+        with mock.patch.dict(os.environ, {"GITHUB_ACTOR": "dependabot[bot]"}):
+            self.assertTaskError(self.repo.errors())
+
+    def test_exempt_once_on_origin_main_ci_and_offline(self):
+        self.repo.good_history()
+        self.bot_commit()
+        self.on_main()
+        self.assertClean(self.repo.errors())
+        self.assertClean(track.check(self.repo.root, pre_commit=True))
+
+    def test_bot_commit_touching_other_files_never_exempt(self):
+        # A web-flow-signed commit naming Dependabot can still reach main
+        # (e.g. a maintainer's squash merge); it must change only dependency files.
+        self.repo.good_history()
+        self.bot_commit(path="tools/track.py")
+        self.on_main()
+        with mock.patch.dict(os.environ, self.DEPENDABOT_RUN):
+            self.assertTaskError(self.repo.errors())
+
+    def test_dependency_file_forms(self):
+        for path in [
+            ".github/workflows/ci.yml",
+            ".github/dependabot.yml",
+            "Package.swift",
+            "Package.resolved",
+            "md3.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+        ]:
+            with self.subTest(path=path):
+                self.bot_commit(path=path)
+                self.assertTrue(track.only_dependency_files(self.repo.root, "HEAD"))
+        for path in [".github/workflows/sub/x.yml", "Package.swift.bak", "tools/Package.swift"]:
+            with self.subTest(path=path):
+                self.bot_commit(path=path)
+                self.assertFalse(track.only_dependency_files(self.repo.root, "HEAD"))
+
+    def test_other_authors_never_exempt(self):
+        self.repo.good_history()
+        self.bot_commit(author="Someone <someone@example.invalid>")
+        self.on_main()
+        with mock.patch.dict(os.environ, self.DEPENDABOT_RUN):
+            self.assertTaskError(self.repo.errors())
+
+    def test_exempt_bot_commit_still_checked_for_attribution(self):
         self.repo.good_history()
         self.bot_commit("Bump x\n\nGenerated by a bot")
-        with mock.patch.object(track, "verify_bot_commit", return_value=True):
+        with mock.patch.dict(os.environ, self.DEPENDABOT_RUN):
             self.assertProblem("AI attribution")
-
-    def test_other_authors_never_queried(self):
-        self.repo.good_history()
-        self.repo.commit_all(msg("Sneaky change"), sync=True)
-        with mock.patch.object(track, "verify_bot_commit", return_value=True) as v:
-            errors = self.repo.errors()
-        v.assert_not_called()
-        self.assertTrue(any("missing Task: trailer" in e for e in errors), errors)
-
-    # Shape of a real Dependabot commit, from GitHub's API (actions/checkout PR 2590).
-    REAL = {
-        "commit": {"verification": {"verified": True, "reason": "valid"}},
-        "author": {"login": "dependabot[bot]"},
-        "committer": {"login": "web-flow"},
-    }
-
-    def test_github_response_rules(self):
-        self.assertTrue(track.dependabot_verified(self.REAL))
-        self.assertFalse(track.dependabot_verified({**self.REAL, "author": {"login": "someone"}}))
-        self.assertFalse(track.dependabot_verified(
-            {**self.REAL, "commit": {"verification": {"verified": False, "reason": "unsigned"}}}))
-        self.assertFalse(track.dependabot_verified({"author": None, "commit": {}}))
-
-    def test_realistic_impostor_signed_with_own_key_fails(self):
-        # Someone names Dependabot as author and signs with their own key:
-        # GitHub shows it verified, authored by dependabot[bot], but committed
-        # by them, not by GitHub (web-flow).
-        impostor = {
-            "commit": {"verification": {"verified": True, "reason": "valid"}},
-            "author": {"login": "dependabot[bot]"},
-            "committer": {"login": "mallory"},
-        }
-        self.assertFalse(track.dependabot_verified(impostor))
-        self.assertFalse(track.dependabot_verified(
-            {**self.REAL, "commit": {"verification": {"verified": True, "reason": "expired_key"}}}))
 
     def test_merged_bot_commit_not_flagged_stale(self):
         # Dependabot never regenerates STATUS/TIMELINE; merging its PR must
         # not make the generated files look stale.
         self.repo.good_history()
         self.repo.git("checkout", "-q", "-b", "dependabot/x")
-        self.repo.git("commit", "-q", "--allow-empty", "--author", self.BOT, "-m", "Bump x")
+        self.bot_commit()
         self.repo.git("checkout", "-q", "main")
         self.repo.git("merge", "-q", "--no-ff", "-m", "Merge pull request #9 from dependabot/x", "dependabot/x")
-        with mock.patch.object(track, "verify_bot_commit", return_value=True):
-            self.assertEqual(self.repo.errors(), [])
-        with mock.patch.object(track, "verify_bot_commit", return_value=False):
-            self.assertTrue(any("stale" in e for e in self.repo.errors()))
-
-    def test_pre_commit_trusts_bot_commits_already_on_main(self):
-        # Locally, a bot commit already on origin/main was verified by CI
-        # before merge, so no GitHub lookup is needed (works offline).
-        self.repo.good_history()
-        self.bot_commit("Bump x")
-        self.repo.git("update-ref", "refs/remotes/origin/main", "HEAD")
-        with mock.patch.object(track, "verify_bot_commit", side_effect=AssertionError("network")):
-            errors = track.check(self.repo.root, pre_commit=True)
-        self.assertFalse(any("Task" in e for e in errors), errors)
-
-    def test_pre_commit_still_verifies_bot_commits_not_on_main(self):
-        self.repo.good_history()
-        self.bot_commit("Bump x")
-        with mock.patch.object(track, "verify_bot_commit", return_value=False) as v:
-            errors = track.check(self.repo.root, pre_commit=True)
-        v.assert_called()
-        self.assertTrue(any("missing Task" in e for e in errors), errors)
-
-    def test_ci_ignores_origin_main_shortcut(self):
-        self.repo.good_history()
-        self.bot_commit("Bump x")
-        self.repo.git("update-ref", "refs/remotes/origin/main", "HEAD")
-        with mock.patch.object(track, "verify_bot_commit", return_value=False):
-            self.assertTrue(any("missing Task" in e for e in self.repo.errors()))
-
-    def test_malformed_github_responses_fail_closed(self):
-        for bad in [[], "x", {"commit": "x"}, {"commit": {"verification": []}}, {"author": "x", "committer": 3}]:
-            with self.subTest(bad=bad):
-                self.assertFalse(track.dependabot_verified(bad))
-
-    def test_github_repo_url_forms(self):
-        for url in [
-            "git@github.com:rtjw42/md3.git",
-            "https://github.com/rtjw42/md3",
-            "https://github.com/rtjw42/md3.git/",
-            "ssh://git@ssh.github.com:443/rtjw42/md3.git",
-        ]:
-            with self.subTest(url=url):
-                self.repo.git("remote", "remove", "origin") if "origin" in self.repo.git("remote") else None
-                self.repo.git("remote", "add", "origin", url)
-                self.assertEqual(track.github_repo(self.repo.root), "rtjw42/md3")
-
-    def test_no_github_no_exemption(self):
-        # The fixture repo has no GitHub remote, so verification must fail closed.
-        self.assertFalse(track.verify_bot_commit(self.repo.root, "0" * 40))
+        self.assertTrue(any("stale" in e for e in self.repo.errors()))
+        self.on_main()
+        self.assertClean(self.repo.errors())
 
 
 class Attribution(TrackTestCase):

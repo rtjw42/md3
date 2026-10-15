@@ -51,3 +51,5 @@ Summary (written when the batch closes): —
 - 2026-10-14 Cross-check X2: APPROVE WITH CONDITIONS (committer web-flow + reason valid required; realistic impostor test; GH_TOKEN only on the tracking step; HANDOFF rewritten) — applied
 - 2026-10-14 B0.3.3: stale-tracking demo PR #3 (branch ci-test-stale, closed): CI's Tracking check failed on hand-edited STATUS/TIMELINE as required. "CI green on main" is confirmed after the B0.3 merge.
 - 2026-10-14 B0.3.3: back to doing after stage review: Dependabot merges still failed the stale-files check, and "CI green on main" can only be shown after merge. Marked done in the next stage once main is green.
+- 2026-10-15 B0.3.3: stage reviews re-run on the final code (findings had not been recorded). The X2 GitHub lookup was replaced: a commit GitHub signs as web-flow can name Dependabot as author, so the exemption now needs dependency-files-only plus origin/main or Dependabot's own CI run; no GH_TOKEN in CI.
+- 2026-10-15 B0.3.3: the Evidence trailer on 2e2689e ("main confirmed after merge") was written before the merge; it is superseded. The commit that marks B0.3.3 done must carry its own Evidence with the CI run on main.
