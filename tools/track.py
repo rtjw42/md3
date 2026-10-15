@@ -224,6 +224,7 @@ class Commit:
     message: str
     parents: list[str]
     trailers: dict[str, str]
+    author_email: str = ""
 
     @property
     def short(self) -> str:
@@ -264,16 +265,56 @@ def commits(root: Path, rev: str = "HEAD") -> list[Commit]:
         return []
     raw = git(
         root, "log", "--reverse", "--topo-order", "--date=short",
-        "--format=%H%x1f%P%x1f%ad%x1f%s%x1f%B%x1e", rev,
+        "--format=%H%x1f%P%x1f%ad%x1f%ae%x1f%s%x1f%B%x1e", rev,
     )
     result = []
     for rec in raw.split("\x1e"):
         rec = rec.strip("\n")
         if not rec:
             continue
-        sha, parents, date, subject, body = rec.split("\x1f", 4)
-        result.append(Commit(sha, date, subject, body, parents.split(), parse_trailers(body)))
+        sha, parents, date, email, subject, body = rec.split("\x1f", 5)
+        result.append(Commit(sha, date, subject, body, parents.split(), parse_trailers(body), email))
     return result
+
+
+# X2: Dependabot's commits can't carry a Task: trailer. They are exempt from
+# the Task rules (never from the attribution check) only when all hold:
+# - the author is Dependabot's address and the commit changes dependency
+#   files only (workflows, Dependabot config, Package.swift/.resolved);
+# - and either it is already on origin/main (it passed review and CI on the
+#   protected branch), or this is a GitHub Actions run started by Dependabot
+#   itself (GITHUB_ACTOR is set by GitHub; a fork can't claim it).
+# The author address alone can be faked, and so can a GitHub-signed commit
+# naming Dependabot (web editor or contents API), so neither is enough.
+DEPENDABOT_EMAIL = "49699333+dependabot[bot]@users.noreply.github.com"
+DEPENDABOT_ACTOR = "dependabot[bot]"
+DEPENDENCY_FILE = re.compile(
+    r"\.github/workflows/[^/]+\.ya?ml|\.github/dependabot\.ya?ml|Package\.swift|(?:.+/)?Package\.resolved"
+)
+
+
+def only_dependency_files(root: Path, sha: str) -> bool:
+    names = git(root, "diff-tree", "-z", "--no-commit-id", "--name-only", "-r", "--root", sha).split("\0")
+    names = [n for n in names if n]
+    return bool(names) and all(DEPENDENCY_FILE.fullmatch(n) for n in names)
+
+
+def on_origin_main(root: Path, sha: str) -> bool:
+    try:
+        git(root, "merge-base", "--is-ancestor", sha, "refs/remotes/origin/main")
+        return True
+    except TrackError:
+        return False
+
+
+def dependabot_run() -> bool:
+    return os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("GITHUB_ACTOR") == DEPENDABOT_ACTOR
+
+
+def exempt_bot_commit(root: Path, sha: str, email: str) -> bool:
+    if email != DEPENDABOT_EMAIL or not only_dependency_files(root, sha):
+        return False
+    return on_origin_main(root, sha) or dependabot_run()
 
 
 def head(root: Path) -> str | None:
@@ -594,8 +635,15 @@ def check(root: Path, pre_commit: bool = False) -> list[str]:
         if c.is_merge:
             continue
         tid = c.trailers.get("Task")
+        if tid is None and exempt_bot_commit(root, c.sha, c.author_email):
+            continue
         if tid is None:
-            errors.append(f"commit {c.short} '{c.subject}': missing Task: trailer")
+            hint = (
+                " (Dependabot commits are exempt only once on origin/main or in Dependabot's own"
+                " CI run, and only when they change dependency files)"
+                if c.author_email == DEPENDABOT_EMAIL else ""
+            )
+            errors.append(f"commit {c.short} '{c.subject}': missing Task: trailer{hint}")
             continue
         if not (tid == "meta" or tid in all_task_ids or (X_ID.match(tid) and tid in plan.backlog_ids)):
             errors.append(f"commit {c.short}: Task: {tid} is not a task ID, a backlog X ID or 'meta'")
@@ -651,8 +699,9 @@ def check_generated(root: Path, plan: Plan) -> list[str]:
         if not base_ok:
             errors.append(
                 f"{path} was generated at {base[:7] if base else 'no commit'}, which is stale "
-                "(after an amend or rebase the hook's base commit is gone): run tools/track.py sync "
-                "and commit the result; prefer a new commit over --amend"
+                "(a commit was made without the hooks, or an amend or rebase replaced the commit "
+                "the hook generated against): run tools/track.py sync and commit the result; "
+                "prefer a new commit over --amend"
             )
             continue
         expected = gen(plan, commits(root, base) if base else [], base, None)
@@ -712,8 +761,13 @@ def allowed_base(root: Path, base: str, current: str) -> bool:
     parents = git(root, "rev-list", "--parents", "-n", "1", current).split()[1:]
     if len(parents) > 1:  # a merge: ignore what main already had
         revs += ["--not", parents[0]]
-    newer = [line.split() for line in git(root, "rev-list", "--parents", *revs).splitlines()]
-    plain = [ids for ids in newer if len(ids) == 2]
+    plain = []
+    for line in git(root, "log", "--format=%H %P%x1f%ae", *revs).splitlines():
+        ids, email = line.split("\x1f")
+        ids = ids.split()
+        # Exempt Dependabot commits never run the hook (X2); they don't count.
+        if len(ids) == 2 and not exempt_bot_commit(root, ids[0], email):
+            plain.append(ids)
     # At most one ordinary commit: the one the hook generated the files for.
     return not plain or (len(plain) == 1 and plain[0][1] == base)
 

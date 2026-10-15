@@ -20,9 +20,9 @@ Summary (written when the batch closes): —
 ## B0.3 Project skeleton and CI
 | ID | Task | Decisions | Depends on | Done when | Status |
 |---|---|---|---|---|---|
-| B0.3.1 | Xcode app target: LSUIElement, macOS 14.2 minimum, Apple Silicon only | D2, D3, #35, §6.1 | B0.2 | Empty app builds and shows a menu bar item | todo |
-| B0.3.2 | Swift package for modules, C target for real-time code, test targets; exact dependency versions, `Package.resolved` committed | D2, #42, #52, #102 | B0.3.1 | `swift test` runs a placeholder test in each target | todo |
-| B0.3.3 | CI (GitHub Actions, macOS runner, one pinned Xcode version): build, unit tests and `track.py check` on every push and PR. Actions pinned to full commit SHAs (the repo enforces this), `permissions: contents: read` | §4.8, security rule 4 | B0.3.2 | CI green on main; a PR with stale tracking files fails; then ask the user to add CI as a required check and set up CodeQL (MAINTAINER-SETUP, later steps); Dependabot commits pass `track.py check` (X2) | todo |
+| B0.3.1 | Xcode app target: LSUIElement, macOS 14.2 minimum, Apple Silicon only | D2, D3, #35, §6.1 | B0.2 | Empty app builds and shows a menu bar item | done |
+| B0.3.2 | Swift package for modules, C target for real-time code, test targets; exact dependency versions, `Package.resolved` committed | D2, #42, #52, #102 | B0.3.1 | `swift test` runs a placeholder test in each target | done |
+| B0.3.3 | CI (GitHub Actions, macOS runner, one pinned Xcode version): build, unit tests and `track.py check` on every push and PR. Actions pinned to full commit SHAs (the repo enforces this), `permissions: contents: read` | §4.8, security rule 4 | B0.3.2 | CI green on main; a PR with stale tracking files fails; then ask the user to add CI as a required check and set up CodeQL (MAINTAINER-SETUP, later steps); Dependabot commits pass `track.py check` (X2) | doing |
 
 ## B0.4 Evidence carried over
 | ID | Task | Decisions | Depends on | Done when | Status |
@@ -46,3 +46,10 @@ Summary (written when the batch closes): —
 - 2026-10-08 B0.1.2: committed with `Task: B0.1.2` (and B0.1.1 with its own commit) instead of `Task: meta`, so track.py can prove both are done.
 - 2026-10-08 B0.1.3: task rows restored verbatim from the plan after review; only Depends on, Status and the B4.2.3 "see X1" pointer are additions.
 - 2026-10-08 B0.3.3: scope extended by the user to handle X2 (Dependabot commits in `track.py check`), moved from B0.5.3.
+- 2026-10-09 B0.3.2: no third-party packages yet, so no Package.resolved; each #42 dependency is added, pinned exactly and licence-checked (#174) by the task that first uses it.
+- 2026-10-14 Cross-check #177: APPROVE
+- 2026-10-14 Cross-check X2: APPROVE WITH CONDITIONS (committer web-flow + reason valid required; realistic impostor test; GH_TOKEN only on the tracking step; HANDOFF rewritten) — applied
+- 2026-10-14 B0.3.3: stale-tracking demo PR #3 (branch ci-test-stale, closed): CI's Tracking check failed on hand-edited STATUS/TIMELINE as required. "CI green on main" is confirmed after the B0.3 merge.
+- 2026-10-14 B0.3.3: back to doing after stage review: Dependabot merges still failed the stale-files check, and "CI green on main" can only be shown after merge. Marked done in the next stage once main is green.
+- 2026-10-15 B0.3.3: stage reviews re-run on the final code (findings had not been recorded). The X2 GitHub lookup was replaced: a commit GitHub signs as web-flow can name Dependabot as author, so the exemption now needs dependency-files-only plus origin/main or Dependabot's own CI run; no GH_TOKEN in CI.
+- 2026-10-15 B0.3.3: the Evidence trailer on 2e2689e ("main confirmed after merge") was written before the merge; it is superseded. The commit that marks B0.3.3 done must carry its own Evidence with the CI run on main.
