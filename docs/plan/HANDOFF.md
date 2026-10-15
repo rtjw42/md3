@@ -1,5 +1,5 @@
 Updated: 2026-10-15 · Branch: b0.4-evidence · Last: merged main (B0.3, PR #4) into it
-Doing: B0.3.3 (marking done with the main CI run as Evidence)
+Doing: none (B0.3.3 done on this branch)
 Done so far: B0.1–B0.3 merged; B0.4.2 done (#173–#176, #178); CI green on main (run 38781706175)
 Next step: B0.4.1 needs the simulation scripts' location from the user; B0.4 PR after it
 Uncommitted work: none
