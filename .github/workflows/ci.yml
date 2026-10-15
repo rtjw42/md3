@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # Never cancel runs on main: every merge commit gets a result.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build-and-test:
+    # Xcode 27 preview image (#177); not the paid xlarge label.
+    runs-on: xcode-27
+    timeout-minutes: 30
+    env:
+      # Select Xcode 27.0 explicitly: the image's default changes when 27.1 ships (#177).
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # track.py needs the full history
+          persist-credentials: false
+
+      - name: Require Xcode 27.0 (27A266a)
+        run: |
+          xcodebuild -version
+          if ! xcodebuild -version | grep -qx 'Xcode 27.0' || ! xcodebuild -version | grep -qx 'Build version 27A266a'; then
+            echo "::error::Expected Xcode 27.0 (27A266a) at $DEVELOPER_DIR"
+            exit 1
+          fi
+
+      - name: Tracking check
+        run: python3 tools/track.py check
+
+      - name: Tracker unit tests
+        run: python3 -m unittest discover -s tools
+
+      - name: Swift package tests
+        run: swift test
+
+      - name: Build app (Release)
+        run: xcodebuild -project md3.xcodeproj -scheme md3 -configuration Release -derivedDataPath build/DerivedData build
+
+      - name: Check app properties (B0.3.1)
+        run: |
+          APP=build/DerivedData/Build/Products/Release/md3.app
+          test "$(plutil -extract LSUIElement raw "$APP/Contents/Info.plist")" = "true"
+          test "$(plutil -extract LSMinimumSystemVersion raw "$APP/Contents/Info.plist")" = "14.2"
+          test "$(lipo -archs "$APP/Contents/MacOS/md3")" = "arm64"
+          codesign -dv "$APP" 2>&1 | grep -q 'flags=.*runtime'
+          echo "LSUIElement, macOS 14.2, arm64 only, hardened runtime: ok"

@@ -1,6 +1,6 @@
-Updated: 2026-10-08 · Branch: b0.4-evidence (pushed; no PR yet)
-Doing: none
-Done so far: B0.1, B0.2 merged; B0.4.2 done (DOC checks, decisions #173–#176 approved and applied); B0.3.1 unblocked (Xcode installed, licence accepted)
-Next step: on the user's go, B0.3.1 on branch b0.3-skeleton-ci; B0.4.1 still needs the simulation scripts' location; B0.4 PR after B0.4.1
+Updated: 2026-10-15 · Branch: b0.4-evidence · Last: merged main (B0.3, PR #4) into it
+Doing: B0.3.3 (marking done with the main CI run as Evidence)
+Done so far: B0.1–B0.3 merged; B0.4.2 done (#173–#176, #178); CI green on main (run 38781706175)
+Next step: B0.4.1 needs the simulation scripts' location from the user; B0.4 PR after it
 Uncommitted work: none
-Waiting on user: go for B0.3.1; EBU zip downloaded by hand (Cloudflare blocks scripted download), saved outside the repo; location of the design-review simulation scripts (B0.4.1)
+Waiting on user: location of the design-review simulation scripts (B0.4.1); CI as a required check and CodeQL (MAINTAINER-SETUP)

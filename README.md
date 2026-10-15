@@ -1,5 +1,7 @@
 # md3
 
+[![CI](https://github.com/rtjw42/md3/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rtjw42/md3/actions/workflows/ci.yml)
+
 A lightweight macOS menu bar app for accurate audio metering. Its main job is comparing the same song across sources (browser, Apple Music, Spotify and local files) with verified loudness, spectrum and stereo measurements, kept in a history for side-by-side comparison. It also hosts Audio Unit plugins to process a single app's audio.
 
 md3 is for producers and mixing engineers, as a Mac-wide audio utility for everything outside the DAW: comparing a mix with references, comparing a release across platforms, and processing what you listen to.
